@@ -16,6 +16,14 @@ export interface Client {
   phone?: string;
   email?: string;
   notes?: string;
+  // PRA specific fields
+  ownerName?: string;
+  companyName?: string;
+  gst?: string;
+  ntn?: string;
+  irisPassword?: string;
+  praPassword?: string;
+  praPin?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +75,7 @@ export interface Document {
   mimeType: string;
   encryptedData: string;
   tags: string[];
+  reference?: string;
   uploadedBy: string;
   uploadedAt: Date;
   lastAccessed?: Date;

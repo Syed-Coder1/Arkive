@@ -34,6 +34,14 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
     phone: '',
     email: '',
     notes: '',
+    // PRA specific fields
+    ownerName: '',
+    companyName: '',
+    gst: '',
+    ntn: '',
+    irisPassword: '',
+    praPassword: '',
+    praPin: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,6 +68,13 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
         phone: '',
         email: '',
         notes: '',
+        ownerName: '',
+        companyName: '',
+        gst: '',
+        ntn: '',
+        irisPassword: '',
+        praPassword: '',
+        praPin: '',
       });
       setShowForm(false);
       alert('Client created successfully!');
@@ -100,6 +115,13 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       phone: client.phone || '',
       email: client.email || '',
       notes: client.notes || '',
+      ownerName: client.ownerName || '',
+      companyName: client.companyName || '',
+      gst: client.gst || '',
+      ntn: client.ntn || '',
+      irisPassword: '', // Don't pre-fill passwords for security
+      praPassword: '',
+      praPin: '',
     });
     setEditingClient(client);
     setShowForm(true);
@@ -134,11 +156,24 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
         phone: formData.phone,
         email: formData.email,
         notes: formData.notes,
+        ownerName: formData.ownerName,
+        companyName: formData.companyName,
+        gst: formData.gst,
+        ntn: formData.ntn,
         updatedAt: new Date(),
       };
       
       if (formData.password) {
         updatedClient.password = formData.password;
+      }
+      if (formData.irisPassword) {
+        updatedClient.irisPassword = formData.irisPassword;
+      }
+      if (formData.praPassword) {
+        updatedClient.praPassword = formData.praPassword;
+      }
+      if (formData.praPin) {
+        updatedClient.praPin = formData.praPin;
       }
       
       await db.updateClient(updatedClient);
@@ -151,6 +186,13 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
         phone: '',
         email: '',
         notes: '',
+        ownerName: '',
+        companyName: '',
+        gst: '',
+        ntn: '',
+        irisPassword: '',
+        praPassword: '',
+        praPin: '',
       });
       setEditingClient(null);
       setShowForm(false);
@@ -285,6 +327,9 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     <div>{client.phone || 'N/A'}</div>
                     <div className="text-gray-500 dark:text-gray-400">{client.email || 'N/A'}</div>
+                    {client.type === 'PRA' && client.companyName && (
+                      <div className="text-xs text-blue-600 dark:text-blue-400">{client.companyName}</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <div className="flex space-x-2">
@@ -400,6 +445,112 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
                 </select>
               </div>
 
+              {/* PRA Specific Fields */}
+              {formData.type === 'PRA' && (
+                <>
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      PRA Specific Information
+                    </h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Owner Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.ownerName}
+                      onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                      placeholder="Enter owner name"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Company Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.companyName}
+                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                      placeholder="Enter company name"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        GST Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.gst}
+                        onChange={(e) => setFormData({ ...formData, gst: e.target.value })}
+                        placeholder="GST number"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        NTN Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.ntn}
+                        onChange={(e) => setFormData({ ...formData, ntn: e.target.value })}
+                        placeholder="NTN number"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      IRIS Password {editingClient ? '(leave blank to keep current)' : ''}
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.irisPassword}
+                      onChange={(e) => setFormData({ ...formData, irisPassword: e.target.value })}
+                      placeholder="Enter IRIS password"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        PRA Password {editingClient ? '(leave blank to keep current)' : ''}
+                      </label>
+                      <input
+                        type="password"
+                        value={formData.praPassword}
+                        onChange={(e) => setFormData({ ...formData, praPassword: e.target.value })}
+                        placeholder="Enter PRA password"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        PRA PIN {editingClient ? '(leave blank to keep current)' : ''}
+                      </label>
+                      <input
+                        type="password"
+                        value={formData.praPin}
+                        onChange={(e) => setFormData({ ...formData, praPin: e.target.value })}
+                        placeholder="Enter PRA PIN"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Phone
@@ -458,6 +609,13 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
                       phone: '',
                       email: '',
                       notes: '',
+                      ownerName: '',
+                      companyName: '',
+                      gst: '',
+                      ntn: '',
+                      irisPassword: '',
+                      praPassword: '',
+                      praPin: '',
                     });
                   }}
                   className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
@@ -504,6 +662,14 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
                         <div className="space-y-2 text-sm">
                           <div><span className="font-medium text-gray-900 dark:text-white">CNIC:</span> <span className="text-gray-600 dark:text-gray-400">{client.cnic}</span></div>
                           <div><span className="font-medium text-gray-900 dark:text-white">Type:</span> <span className="text-gray-600 dark:text-gray-400">{client.type}</span></div>
+                          {client.type === 'PRA' && (
+                            <>
+                              {client.ownerName && <div><span className="font-medium text-gray-900 dark:text-white">Owner:</span> <span className="text-gray-600 dark:text-gray-400">{client.ownerName}</span></div>}
+                              {client.companyName && <div><span className="font-medium text-gray-900 dark:text-white">Company:</span> <span className="text-gray-600 dark:text-gray-400">{client.companyName}</span></div>}
+                              {client.gst && <div><span className="font-medium text-gray-900 dark:text-white">GST:</span> <span className="text-gray-600 dark:text-gray-400">{client.gst}</span></div>}
+                              {client.ntn && <div><span className="font-medium text-gray-900 dark:text-white">NTN:</span> <span className="text-gray-600 dark:text-gray-400">{client.ntn}</span></div>}
+                            </>
+                          )}
                           <div><span className="font-medium text-gray-900 dark:text-white">Phone:</span> <span className="text-gray-600 dark:text-gray-400">{client.phone || 'N/A'}</span></div>
                           <div><span className="font-medium text-gray-900 dark:text-white">Email:</span> <span className="text-gray-600 dark:text-gray-400">{client.email || 'N/A'}</span></div>
                           <div><span className="font-medium text-gray-900 dark:text-white">Notes:</span> <span className="text-gray-600 dark:text-gray-400">{client.notes || 'N/A'}</span></div>

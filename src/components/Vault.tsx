@@ -17,7 +17,10 @@ import {
   Plus,
   File,
   Image,
-  FileImage
+  FileImage,
+  Link,
+  ExternalLink,
+  Users
 } from 'lucide-react';
 import { useDocuments, useClients } from '../hooks/useDatabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,11 +46,13 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
   const [uploading, setUploading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showLinkedDocs, setShowLinkedDocs] = useState<string | null>(null);
 
   const [uploadForm, setUploadForm] = useState({
     clientCnic: '',
     fileType: 'other' as Document['fileType'],
     tags: '',
+    reference: '',
     files: [] as File[]
   });
 
@@ -100,6 +105,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
           mimeType: file.type,
           encryptedData,
           tags: uploadForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+          reference: uploadForm.reference.trim() || undefined,
           uploadedBy: user!.id
         });
       }
@@ -109,6 +115,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
         clientCnic: '',
         fileType: 'other',
         tags: '',
+        reference: '',
         files: []
       });
       
@@ -195,13 +202,18 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
     return colors[fileType];
   };
 
+  const getLinkedDocuments = (clientCnic: string) => {
+    return documents.filter(doc => doc.clientCnic === clientCnic);
+  };
+
   const filteredDocuments = documents.filter(doc => {
     const client = clients.find(c => c.cnic === doc.clientCnic);
     const matchesSearch = !searchTerm || 
       doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.clientCnic.includes(searchTerm) ||
-      doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (doc.reference && doc.reference.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = !filterType || doc.fileType === filterType;
     const matchesClient = !filterClient || doc.clientCnic === filterClient;
@@ -226,7 +238,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
             Secure Vault
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Encrypted document storage for client files and contracts
+            Encrypted document storage with client linking and reference tracking
           </p>
         </div>
         <button
@@ -238,8 +250,8 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Enhanced Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover-lift">
           <div className="flex items-center justify-between">
             <div>
@@ -265,12 +277,24 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover-lift">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Clients with Docs</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Linked Clients</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {new Set(documents.map(doc => doc.clientCnic)).size}
               </p>
             </div>
-            <User className="w-8 h-8 text-purple-500" />
+            <Users className="w-8 h-8 text-purple-500" />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover-lift">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">With References</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {documents.filter(doc => doc.reference).length}
+              </p>
+            </div>
+            <Link className="w-8 h-8 text-orange-500" />
           </div>
         </div>
 
@@ -284,7 +308,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                 ).length}
               </p>
             </div>
-            <Clock className="w-8 h-8 text-orange-500" />
+            <Clock className="w-8 h-8 text-indigo-500" />
           </div>
         </div>
       </div>
@@ -300,7 +324,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by filename, client, CNIC, or tags..."
+                placeholder="Search by filename, client, CNIC, tags, or reference..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
               />
             </div>
@@ -344,6 +368,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredDocuments.map((document, index) => {
           const client = clients.find(c => c.cnic === document.clientCnic);
+          const linkedDocs = getLinkedDocuments(document.clientCnic);
           return (
             <div
               key={document.id}
@@ -388,6 +413,23 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                     </span>
                   </div>
                 )}
+                {document.reference && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Reference:</span>
+                    <span className="text-gray-900 dark:text-white truncate">
+                      {document.reference}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">Linked Docs:</span>
+                  <button
+                    onClick={() => setShowLinkedDocs(document.clientCnic)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
+                  >
+                    {linkedDocs.length} <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
 
               {document.tags.length > 0 && (
@@ -481,7 +523,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                     required
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Auto-matches existing client or creates new entry
+                    Auto-links to existing client or creates new entry
                   </p>
                 </div>
 
@@ -501,6 +543,22 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                     <option value="invoice">Invoice</option>
                     <option value="other">Other</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Reference (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadForm.reference}
+                    onChange={(e) => setUploadForm({ ...uploadForm, reference: e.target.value })}
+                    placeholder="Enter reference number or identifier"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-300"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    e.g., case number, file reference, invoice number
+                  </p>
                 </div>
 
                 <div>
@@ -570,6 +628,7 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                     clientCnic: '',
                     fileType: 'other',
                     tags: '',
+                    reference: '',
                     files: []
                   });
                   if (fileInputRef.current) {
@@ -592,7 +651,83 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
         </div>
       )}
 
-      {/* Preview Modal */}
+      {/* Linked Documents Modal */}
+      {showLinkedDocs && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Link className="w-5 h-5" />
+                Linked Documents
+              </h2>
+              <button
+                onClick={() => setShowLinkedDocs(null)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {(() => {
+              const client = clients.find(c => c.cnic === showLinkedDocs);
+              const linkedDocs = getLinkedDocuments(showLinkedDocs);
+              
+              return (
+                <div>
+                  <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      {client?.name || 'Unknown Client'}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      CNIC: {showLinkedDocs} • {linkedDocs.length} documents
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {linkedDocs.map((doc) => (
+                      <div key={doc.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <div className="flex items-center space-x-3 mb-3">
+                          {getFileIcon(doc.mimeType)}
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                              {doc.fileName}
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {format(doc.uploadedAt, 'MMM dd, yyyy')}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getFileTypeColor(doc.fileType)}`}>
+                            {doc.fileType.replace('_', ' ').toUpperCase()}
+                          </span>
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => handlePreview(doc)}
+                              className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDownload(doc)}
+                              className="p-1 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900 rounded"
+                            >
+                              <Download size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal - Enhanced */}
       {showPreview && selectedDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-slideInRight">
@@ -663,6 +798,14 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                         {selectedDocument.clientCnic}
                       </span>
                     </div>
+                    {selectedDocument.reference && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Reference:</span>
+                        <span className="text-gray-900 dark:text-white">
+                          {selectedDocument.reference}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-500 dark:text-gray-400">Uploaded:</span>
                       <span className="text-gray-900 dark:text-white">
@@ -707,6 +850,13 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
                   >
                     <Download size={16} />
                     Download
+                  </button>
+                  <button
+                    onClick={() => setShowLinkedDocs(selectedDocument.clientCnic)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300"
+                  >
+                    <Link size={16} />
+                    Linked
                   </button>
                   <button
                     onClick={() => handleDelete(selectedDocument.id, selectedDocument.fileName)}
