@@ -10,7 +10,6 @@ import {
   deleteClientFromFirebase,
 } from '../firebaseClients';
 
-
 interface ClientsProps {
   showForm?: boolean;
   onCloseForm?: () => void;
@@ -29,30 +28,29 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
 
   // Sync clients from Firebase and merge with local clients
   useEffect(() => {
-  const fetchClients = async () => {
-    try {
-      const firebaseClients = await getAllClientsFromFirebase();
-      const mergedClients = [...localClients];
+    const fetchClients = async () => {
+      try {
+        const firebaseClients = await getAllClientsFromFirebase();
+        const mergedClients = [...localClients];
 
-      firebaseClients.forEach(fbClient => {
-        const existingIndex = mergedClients.findIndex(c => c.id === fbClient.id);
-        if (existingIndex >= 0) {
-          mergedClients[existingIndex] = fbClient;
-        } else {
-          mergedClients.push(fbClient);
-        }
-      });
+        firebaseClients.forEach(fbClient => {
+          const existingIndex = mergedClients.findIndex(c => c.id === fbClient.id);
+          if (existingIndex >= 0) {
+            mergedClients[existingIndex] = fbClient;
+          } else {
+            mergedClients.push(fbClient);
+          }
+        });
 
-      setClients(mergedClients);
-    } catch (error) {
-      console.error('Error fetching clients from Firebase:', error);
-      setClients(localClients);
-    }
-  };
+        setClients(mergedClients);
+      } catch (error) {
+        console.error('Error fetching clients from Firebase:', error);
+        setClients(localClients);
+      }
+    };
 
-  fetchClients();
-}, []);
-
+    fetchClients();
+  }, [localClients]);
 
   useEffect(() => {
     if (externalShowForm !== undefined) {
@@ -148,7 +146,6 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       try {
         await db.deleteClient(clientId);
         await deleteClientFromFirebase(clientId);
-        // Update local state to reflect deletion
         setClients(clients.filter(client => client.id !== clientId));
       } catch (error) {
         console.error('Error deleting client:', error);
@@ -184,7 +181,6 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       await db.updateClient(updatedClient);
       await syncClientToFirebase(updatedClient);
       
-      // Update local state to reflect changes
       setClients(clients.map(client => 
         client.id === updatedClient.id ? updatedClient : client
       ));
