@@ -2,7 +2,7 @@ import { User, Client, Receipt, Expense, Activity, Notification, Document } from
 
 class DatabaseService {
   private dbName = 'arkive-database';
-  private dbVersion = 3; // Increment version for cleanup
+  private dbVersion = 4; // Increment version to create documents store
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
