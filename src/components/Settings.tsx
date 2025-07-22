@@ -1,36 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Shield, 
-  Database, 
-  Palette, 
-  Bell, 
-  Save, 
-  RefreshCw,
-  UserPlus,
-  Trash2,
-  Eye,
-  EyeOff,
-  Check,
-  X,
-  Clock,
-  Activity,
-  AlertTriangle,
-  Users,
-  LogIn,
-  LogOut,
-  Calendar,
-  Monitor,
-  Sync,
-  Wifi,
-  WifiOff,
-  Download,
-  Upload,
-  Settings as SettingsIcon,
-  Moon,
-  Sun,
-  Globe
-} from 'lucide-react';
+import { User, Shield, Database, Palette, Bell, Save, RefreshCw, UserPlus, Trash2, Eye, EyeOff, Check, X, Clock, Activity, AlertTriangle, Users, LogIn, LogOut, Calendar, Monitor, FolderSync as Sync, Wifi, WifiOff, Download, Upload, Settings as SettingsIcon, Moon, Sun, Globe } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/database';
 import { format, formatDistanceToNow } from 'date-fns';
