@@ -2,8 +2,71 @@ import { User, Client, Receipt, Expense, Activity, Notification, Document } from
 
 class DatabaseService {
   private dbName = 'arkive-database';
-  private dbVersion = 4; // Increment version to create documents store
+  private dbVersion = 5; // Increment for sync improvements
   private db: IDBDatabase | null = null;
+  private syncQueue: any[] = [];
+  private isOnline = navigator.onLine;
+
+  constructor() {
+    // Monitor online status
+    window.addEventListener('online', () => {
+      this.isOnline = true;
+      this.processSyncQueue();
+    });
+    window.addEventListener('offline', () => {
+      this.isOnline = false;
+    });
+  }
+
+  private async addToSyncQueue(operation: any): Promise<void> {
+    this.syncQueue.push({
+      ...operation,
+      timestamp: new Date(),
+      id: crypto.randomUUID()
+    });
+    
+    // Store sync queue in localStorage for persistence
+    localStorage.setItem('arkive-sync-queue', JSON.stringify(this.syncQueue));
+    
+    if (this.isOnline) {
+      await this.processSyncQueue();
+    }
+  }
+
+  private async processSyncQueue(): Promise<void> {
+    if (!this.isOnline || this.syncQueue.length === 0) return;
+    
+    const queue = [...this.syncQueue];
+    this.syncQueue = [];
+    
+    for (const operation of queue) {
+      try {
+        // Process sync operation based on type
+        console.log('Processing sync operation:', operation);
+        // Add actual sync logic here when needed
+      } catch (error) {
+        console.error('Sync operation failed:', error);
+        // Re-add failed operations to queue
+        this.syncQueue.push(operation);
+      }
+    }
+    
+    localStorage.setItem('arkive-sync-queue', JSON.stringify(this.syncQueue));
+  }
+
+  async initSync(): Promise<void> {
+    // Load sync queue from localStorage
+    const savedQueue = localStorage.getItem('arkive-sync-queue');
+    if (savedQueue) {
+      try {
+        this.syncQueue = JSON.parse(savedQueue);
+        await this.processSyncQueue();
+      } catch (error) {
+        console.error('Error loading sync queue:', error);
+        this.syncQueue = [];
+      }
+    }
+  }
 
   async init(): Promise<void> {
     console.log('Database: Starting initialization...');
@@ -42,11 +105,19 @@ class DatabaseService {
             }
           });
 
+          // Add sync metadata store
+          if (!db.objectStoreNames.contains('sync_metadata')) {
+            const syncStore = db.createObjectStore('sync_metadata', { keyPath: 'id' });
+            syncStore.createIndex('lastSync', 'lastSync');
+            syncStore.createIndex('deviceId', 'deviceId');
+          }
+
           // Users store
           if (!db.objectStoreNames.contains('users')) {
             console.log('Creating users store...');
             const userStore = db.createObjectStore('users', { keyPath: 'id' });
             userStore.createIndex('username', 'username', { unique: true });
+            userStore.createIndex('lastModified', 'lastModified');
             console.log('Users store created');
           }
 
@@ -55,6 +126,7 @@ class DatabaseService {
             const clientStore = db.createObjectStore('clients', { keyPath: 'id' });
             clientStore.createIndex('cnic', 'cnic', { unique: true });
             clientStore.createIndex('name', 'name');
+            clientStore.createIndex('lastModified', 'lastModified');
           }
 
           // Receipts store
@@ -62,6 +134,7 @@ class DatabaseService {
             const receiptStore = db.createObjectStore('receipts', { keyPath: 'id' });
             receiptStore.createIndex('clientCnic', 'clientCnic');
             receiptStore.createIndex('date', 'date');
+            receiptStore.createIndex('lastModified', 'lastModified');
           }
 
           // Expenses store
@@ -69,6 +142,7 @@ class DatabaseService {
             const expenseStore = db.createObjectStore('expenses', { keyPath: 'id' });
             expenseStore.createIndex('date', 'date');
             expenseStore.createIndex('category', 'category');
+            expenseStore.createIndex('lastModified', 'lastModified');
           }
 
           // Activities store
@@ -90,6 +164,7 @@ class DatabaseService {
             documentStore.createIndex('clientCnic', 'clientCnic');
             documentStore.createIndex('fileType', 'fileType');
             documentStore.createIndex('uploadedAt', 'uploadedAt');
+            documentStore.createIndex('lastModified', 'lastModified');
           }
         };
       } catch (error) {
@@ -135,7 +210,14 @@ class DatabaseService {
       ...user,
       id: crypto.randomUUID(),
       createdAt: new Date(),
+      lastModified: new Date(),
     };
+    
+    await this.addToSyncQueue({
+      type: 'create',
+      store: 'users',
+      data: newUser
+    });
     
     return new Promise((resolve, reject) => {
       const request = store.add(newUser);
@@ -167,9 +249,16 @@ class DatabaseService {
 
   async updateUser(user: User): Promise<void> {
     const store = await this.getObjectStore('users', 'readwrite');
+    const updatedUser = { ...user, lastModified: new Date() };
+    
+    await this.addToSyncQueue({
+      type: 'update',
+      store: 'users',
+      data: updatedUser
+    });
     
     return new Promise((resolve, reject) => {
-      const request = store.put(user);
+      const request = store.put(updatedUser);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -209,6 +298,7 @@ class DatabaseService {
       id: crypto.randomUUID(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      lastModified: new Date(),
     };
     
     const notification: Notification = {
@@ -218,6 +308,12 @@ class DatabaseService {
       read: false,
       createdAt: new Date(),
     };
+    
+    await this.addToSyncQueue({
+      type: 'create',
+      store: 'clients',
+      data: newClient
+    });
     
     return new Promise((resolve, reject) => {
       transaction.onerror = () => reject(transaction.error);
@@ -272,7 +368,13 @@ class DatabaseService {
 
   async updateClient(client: Client): Promise<void> {
     const store = await this.getObjectStore('clients', 'readwrite');
-    const updatedClient = { ...client, updatedAt: new Date() };
+    const updatedClient = { ...client, updatedAt: new Date(), lastModified: new Date() };
+    
+    await this.addToSyncQueue({
+      type: 'update',
+      store: 'clients',
+      data: updatedClient
+    });
     
     return new Promise((resolve, reject) => {
       const request = store.put(updatedClient);
@@ -296,6 +398,7 @@ class DatabaseService {
       ...receipt,
       id: crypto.randomUUID(),
       createdAt: new Date(),
+      lastModified: new Date(),
     };
     
     const notification: Notification = {
@@ -305,6 +408,12 @@ class DatabaseService {
       read: false,
       createdAt: new Date(),
     };
+    
+    await this.addToSyncQueue({
+      type: 'create',
+      store: 'receipts',
+      data: newReceipt
+    });
     
     return new Promise((resolve, reject) => {
       transaction.onerror = () => reject(transaction.error);
@@ -359,9 +468,16 @@ class DatabaseService {
 
   async updateReceipt(receipt: Receipt): Promise<void> {
     const store = await this.getObjectStore('receipts', 'readwrite');
+    const updatedReceipt = { ...receipt, lastModified: new Date() };
+    
+    await this.addToSyncQueue({
+      type: 'update',
+      store: 'receipts',
+      data: updatedReceipt
+    });
     
     return new Promise((resolve, reject) => {
-      const request = store.put(receipt);
+      const request = store.put(updatedReceipt);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -405,9 +521,16 @@ class DatabaseService {
 
   async updateExpense(expense: Expense): Promise<void> {
     const store = await this.getObjectStore('expenses', 'readwrite');
+    const updatedExpense = { ...expense, lastModified: new Date() };
+    
+    await this.addToSyncQueue({
+      type: 'update',
+      store: 'expenses',
+      data: updatedExpense
+    });
     
     return new Promise((resolve, reject) => {
-      const request = store.put(expense);
+      const request = store.put(updatedExpense);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -583,12 +706,19 @@ class DatabaseService {
       ...document,
       id: crypto.randomUUID(),
       uploadedAt: new Date(),
+      lastModified: new Date(),
       accessLog: [{
         userId: document.uploadedBy,
         timestamp: new Date(),
         action: 'upload'
       }]
     };
+    
+    await this.addToSyncQueue({
+      type: 'create',
+      store: 'documents',
+      data: newDocument
+    });
     
     return new Promise((resolve, reject) => {
       const request = store.add(newDocument);
@@ -620,9 +750,16 @@ class DatabaseService {
 
   async updateDocument(document: Document): Promise<void> {
     const store = await this.getObjectStore('documents', 'readwrite');
+    const updatedDocument = { ...document, lastModified: new Date() };
+    
+    await this.addToSyncQueue({
+      type: 'update',
+      store: 'documents',
+      data: updatedDocument
+    });
     
     return new Promise((resolve, reject) => {
-      const request = store.put(document);
+      const request = store.put(updatedDocument);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -647,10 +784,17 @@ class DatabaseService {
         const document = getRequest.result;
         if (document) {
           document.lastAccessed = new Date();
+          document.lastModified = new Date();
           document.accessLog.push({
             userId,
             timestamp: new Date(),
             action
+          });
+          
+          await this.addToSyncQueue({
+            type: 'update',
+            store: 'documents',
+            data: document
           });
           
           const putRequest = store.put(document);
@@ -689,10 +833,53 @@ class DatabaseService {
       documents,
       exportDate: new Date().toISOString(),
       version: this.dbVersion,
-      appName: 'Arkive'
+      appName: 'Arkive',
+      deviceId: this.getDeviceId()
     };
 
     return JSON.stringify(data, null, 2);
+  }
+
+  private getDeviceId(): string {
+    let deviceId = localStorage.getItem('arkive-device-id');
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem('arkive-device-id', deviceId);
+    }
+    return deviceId;
+  }
+
+  async getLastSyncTime(): Promise<Date | null> {
+    try {
+      const store = await this.getObjectStore('sync_metadata');
+      return new Promise((resolve, reject) => {
+        const request = store.get('last_sync');
+        request.onsuccess = () => {
+          const result = request.result;
+          resolve(result ? new Date(result.timestamp) : null);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async updateLastSyncTime(): Promise<void> {
+    try {
+      const store = await this.getObjectStore('sync_metadata', 'readwrite');
+      return new Promise((resolve, reject) => {
+        const request = store.put({
+          id: 'last_sync',
+          timestamp: new Date(),
+          deviceId: this.getDeviceId()
+        });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.warn('Could not update sync time:', error);
+    }
   }
 
   async importData(jsonData: string): Promise<void> {

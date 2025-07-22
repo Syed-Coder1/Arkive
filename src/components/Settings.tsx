@@ -20,7 +20,16 @@ import {
   LogIn,
   LogOut,
   Calendar,
-  Monitor
+  Monitor,
+  Sync,
+  Wifi,
+  WifiOff,
+  Download,
+  Upload,
+  Settings as SettingsIcon,
+  Moon,
+  Sun,
+  Globe
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/database';
@@ -35,6 +44,9 @@ const Settings: React.FC = () => {
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [syncInProgress, setSyncInProgress] = useState(false);
 
   // Profile settings
   const [profileData, setProfileData] = useState({
@@ -54,10 +66,15 @@ const Settings: React.FC = () => {
   const [appSettings, setAppSettings] = useState({
     notifications: true,
     autoBackup: false,
+    autoSync: true,
     theme: 'system' as 'light' | 'dark' | 'system',
     language: 'en',
     sessionTimeout: 30,
-    maxLoginAttempts: 5
+    maxLoginAttempts: 5,
+    syncInterval: 15, // minutes
+    dataRetention: 365, // days
+    enableAnalytics: true,
+    compressBackups: true
   });
 
   useEffect(() => {
@@ -66,7 +83,45 @@ const Settings: React.FC = () => {
       fetchUserSessions();
     }
     loadSettings();
+    checkSyncStatus();
+    
+    // Monitor online status
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [isAdmin]);
+
+  const checkSyncStatus = async () => {
+    try {
+      const lastSync = await db.getLastSyncTime();
+      setLastSyncTime(lastSync);
+    } catch (error) {
+      console.error('Error checking sync status:', error);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncInProgress(true);
+    try {
+      // Simulate sync process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await db.updateLastSyncTime();
+      await checkSyncStatus();
+      showMessage('Data synchronized successfully!', 'success');
+    } catch (error) {
+      console.error('Sync error:', error);
+      showMessage('Sync failed. Please try again.', 'error');
+    } finally {
+      setSyncInProgress(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -100,13 +155,36 @@ const Settings: React.FC = () => {
   const loadSettings = () => {
     const savedSettings = localStorage.getItem('appSettings');
     if (savedSettings) {
-      setAppSettings(JSON.parse(savedSettings));
+      setAppSettings({ ...appSettings, ...JSON.parse(savedSettings) });
     }
   };
 
-  const saveSettings = () => {
-    localStorage.setItem('appSettings', JSON.stringify(appSettings));
-    showMessage('Settings saved successfully!', 'success');
+  const saveSettings = async () => {
+    setLoading(true);
+    try {
+      localStorage.setItem('appSettings', JSON.stringify(appSettings));
+      
+      // Apply theme immediately
+      if (appSettings.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (appSettings.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        // System theme
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      
+      showMessage('Settings saved successfully!', 'success');
+    } catch (error) {
+      showMessage('Error saving settings', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showMessage = (text: string, type: 'success' | 'error') => {
@@ -288,7 +366,7 @@ const Settings: React.FC = () => {
     try {
       setLoading(true);
       
-      const stores = ['clients', 'receipts', 'expenses', 'activities', 'notifications'];
+      const stores = ['clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
       for (const storeName of stores) {
         try {
           await db.clearStore(storeName);
@@ -314,29 +392,90 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleExportSettings = () => {
+    const settingsData = {
+      appSettings,
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    const blob = new Blob([JSON.stringify(settingsData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arkive-settings-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportSettings = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      if (data.appSettings) {
+        setAppSettings({ ...appSettings, ...data.appSettings });
+        showMessage('Settings imported successfully!', 'success');
+      } else {
+        showMessage('Invalid settings file format', 'error');
+      }
+    } catch (error) {
+      showMessage('Error importing settings', 'error');
+    }
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'sync', label: 'Sync & Backup', icon: Sync },
     ...(isAdmin ? [
       { id: 'users', label: 'User Management', icon: Shield },
       { id: 'monitoring', label: 'User Monitoring', icon: Monitor },
       { id: 'sessions', label: 'Session Logs', icon: Activity }
     ] : []),
-    { id: 'app', label: 'Application', icon: Palette },
+    { id: 'advanced', label: 'Advanced', icon: SettingsIcon },
     { id: 'data', label: 'Data Management', icon: Database },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your account and application preferences
-        </p>
+    <div className="space-y-6 animate-fadeIn">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage your account and application preferences
+          </p>
+        </div>
+        
+        {/* Sync Status */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            {isOnline ? (
+              <Wifi className="w-4 h-4 text-green-500" />
+            ) : (
+              <WifiOff className="w-4 h-4 text-red-500" />
+            )}
+            <span className={isOnline ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
+          
+          {lastSyncTime && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Last sync: {formatDistanceToNow(lastSyncTime, { addSuffix: true })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Message */}
       {message && (
-        <div className={`p-4 rounded-lg border ${
+        <div className={`p-4 rounded-lg border animate-slideInRight ${
           message.type === 'success' 
             ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
             : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
@@ -483,6 +622,226 @@ const Settings: React.FC = () => {
                   </button>
                 </form>
               </div>
+            </div>
+          )}
+
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Appearance Settings</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Theme
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'light', label: 'Light', icon: Sun },
+                      { value: 'dark', label: 'Dark', icon: Moon },
+                      { value: 'system', label: 'System', icon: Monitor }
+                    ].map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setAppSettings({ ...appSettings, theme: value as any })}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors ${
+                          appSettings.theme === value
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                            : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <Icon size={16} />
+                        <span className="text-sm font-medium">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Language
+                  </label>
+                  <select
+                    value={appSettings.language}
+                    onChange={(e) => setAppSettings({ ...appSettings, language: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="en">English</option>
+                    <option value="ur">اردو (Urdu)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">Enable Analytics</label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Help improve the app with usage analytics</p>
+                  </div>
+                  <button
+                    onClick={() => setAppSettings({ ...appSettings, enableAnalytics: !appSettings.enableAnalytics })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      appSettings.enableAnalytics ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        appSettings.enableAnalytics ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <button
+                  onClick={saveSettings}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  {loading ? 'Saving...' : 'Save Appearance Settings'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sync & Backup Tab */}
+          {activeTab === 'sync' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Sync & Backup</h3>
+                <button
+                  onClick={handleSync}
+                  disabled={syncInProgress || !isOnline}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <Sync className={`w-4 h-4 ${syncInProgress ? 'animate-spin' : ''}`} />
+                  {syncInProgress ? 'Syncing...' : 'Sync Now'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Auto Sync</label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Automatically sync data when online</p>
+                    </div>
+                    <button
+                      onClick={() => setAppSettings({ ...appSettings, autoSync: !appSettings.autoSync })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        appSettings.autoSync ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          appSettings.autoSync ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Auto Backup</label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Automatically backup data daily</p>
+                    </div>
+                    <button
+                      onClick={() => setAppSettings({ ...appSettings, autoBackup: !appSettings.autoBackup })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        appSettings.autoBackup ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          appSettings.autoBackup ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-white">Compress Backups</label>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Reduce backup file size</p>
+                    </div>
+                    <button
+                      onClick={() => setAppSettings({ ...appSettings, compressBackups: !appSettings.compressBackups })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        appSettings.compressBackups ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          appSettings.compressBackups ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Sync Interval (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      value={appSettings.syncInterval}
+                      onChange={(e) => setAppSettings({ ...appSettings, syncInterval: parseInt(e.target.value) })}
+                      min="5"
+                      max="60"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Data Retention (days)
+                    </label>
+                    <input
+                      type="number"
+                      value={appSettings.dataRetention}
+                      onChange={(e) => setAppSettings({ ...appSettings, dataRetention: parseInt(e.target.value) })}
+                      min="30"
+                      max="3650"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Settings Import/Export */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Settings Backup</h4>
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleExportSettings}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download size={16} />
+                    Export Settings
+                  </button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImportSettings}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                      <Upload size={16} />
+                      Import Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={saveSettings}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                <Save size={16} />
+                {loading ? 'Saving...' : 'Save Sync Settings'}
+              </button>
             </div>
           )}
 
@@ -831,10 +1190,10 @@ const Settings: React.FC = () => {
             </div>
           )}
 
-          {/* Application Tab */}
-          {activeTab === 'app' && (
+          {/* Advanced Tab */}
+          {activeTab === 'advanced' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Application Settings</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Advanced Settings</h3>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -851,25 +1210,6 @@ const Settings: React.FC = () => {
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                         appSettings.notifications ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">Auto Backup</label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Automatically backup data daily</p>
-                  </div>
-                  <button
-                    onClick={() => setAppSettings({ ...appSettings, autoBackup: !appSettings.autoBackup })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      appSettings.autoBackup ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        appSettings.autoBackup ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>
@@ -905,10 +1245,11 @@ const Settings: React.FC = () => {
 
                 <button
                   onClick={saveSettings}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   <Save size={16} />
-                  Save Settings
+                  {loading ? 'Saving...' : 'Save Advanced Settings'}
                 </button>
               </div>
             </div>

@@ -8,6 +8,7 @@ class AuthService {
     try {
       console.log('Auth: Initializing database...');
       await db.init();
+      await db.initSync();
       console.log('Auth: Database initialized');
       
       // Create default admin account if no users exist

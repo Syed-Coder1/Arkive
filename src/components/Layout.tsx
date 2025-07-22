@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Home, Receipt, Users, CreditCard, BarChart3, Activity, HardDrive,
   Settings, LogOut, Menu, X, Moon, Sun, TrendingUp, ChevronLeft, Shield,
-  ChevronRight, Bell
+  ChevronRight, Bell, Calculator
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
@@ -19,6 +19,7 @@ const menuItems = [
   { id: 'clients', label: 'Clients', icon: Users },
   { id: 'vault', label: 'Secure Vault', icon: Shield },
   { id: 'expenses', label: 'Expenses', icon: CreditCard },
+  { id: 'tax-calculator', label: 'Tax Calculator', icon: Calculator },
   { id: 'analytics', label: 'Analytics', icon: TrendingUp },
   { id: 'smart-notifications', label: 'Notifications', icon: Bell },
   { id: 'activity', label: 'Activity Log', icon: Activity },

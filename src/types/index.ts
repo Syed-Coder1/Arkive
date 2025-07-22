@@ -5,6 +5,7 @@ export interface User {
   role: 'admin' | 'employee';
   createdAt: Date;
   lastLogin?: Date;
+  lastModified?: Date;
 }
 
 export interface Client {
@@ -18,6 +19,7 @@ export interface Client {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastModified?: Date;
 }
 
 export interface Receipt {
@@ -30,6 +32,7 @@ export interface Receipt {
   date: Date;
   createdAt: Date;
   createdBy: string;
+  lastModified?: Date;
 }
 
 export interface Expense {
@@ -40,6 +43,7 @@ export interface Expense {
   date: Date;
   createdAt: Date;
   createdBy: string;
+  lastModified?: Date;
 }
 
 export interface Activity {
@@ -70,6 +74,7 @@ export interface Document {
   uploadedBy: string;
   uploadedAt: Date;
   lastAccessed?: Date;
+  lastModified?: Date;
   accessLog: {
     userId: string;
     timestamp: Date;
