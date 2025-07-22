@@ -4,6 +4,10 @@ import { useClients, useReceipts } from '../hooks/useDatabase';
 import { format } from 'date-fns';
 import { exportService } from '../services/export';
 import { db } from '../services/database';
+import {
+  syncClientToFirebase,
+  deleteClientFromFirebase
+} from '../firebaseClients';
 
 interface ClientsProps {
   showForm?: boolean;
@@ -51,7 +55,11 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
     }
     
     try {
-      await createClient(formData);
+      const newId = crypto.randomUUID();
+      const newClient = { ...formData, id: newId, createdAt: new Date() };
+      await createClient(newClient);
+      await syncClientToFirebase(newClient);
+
       setFormData({
         name: '',
         cnic: '',
@@ -109,6 +117,8 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
     if (confirm('Are you sure you want to delete this client? This will also delete all associated receipts.')) {
       try {
         await db.deleteClient(clientId);
+        await deleteClientFromFirebase(clientId);
+
         window.location.reload();
       } catch (error) {
         console.error('Error deleting client:', error);
@@ -464,12 +474,40 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {editingClient ? 'Update Client' : 'Create Client'}
-                </button>
+                <form onSubmit={editingClient ? handleUpdate : handleSubmit} className="space-y-4">
+  {/* all your input fields here */}
+
+  <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+    <button
+      type="button"
+      onClick={() => {
+        setShowForm(false);
+        if (onCloseForm) onCloseForm();
+        setEditingClient(null);
+        setFormData({
+          name: '',
+          cnic: '',
+          password: '',
+          type: 'Other',
+          phone: '',
+          email: '',
+          notes: '',
+        });
+      }}
+      className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+    >
+      Cancel
+    </button>
+
+    <button
+      type="submit"
+      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+    >
+      {editingClient ? 'Update Client' : 'Create Client'}
+    </button>
+  </div>
+</form>
+
               </div>
           </div>
         </div>

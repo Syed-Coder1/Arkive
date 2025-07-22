@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import { exportService } from '../services/export';
 import { db } from '../services/database';
+import { syncReceiptToFirebase } from '../firebaseReceipts';
 
 interface ReceiptsProps {
   showForm?: boolean;
@@ -62,40 +63,42 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
     return true;
   };
 
-  // Handlers
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
-    try {
-      let existingClient = clients.find(c => c.cnic === formData.clientCnic);
-      
-      if (!existingClient) {
-        await db.createClient({
-          name: formData.clientName,
-          cnic: formData.clientCnic,
-          password: 'default123',
-          type: 'Other' as const,
-          phone: '',
-          email: '',
-          notes: 'Auto-created from receipt',
-        });
-      }
-      
-      await createReceipt({
-        ...formData,
-        amount: parseFloat(formData.amount),
-        date: new Date(formData.date),
-        createdBy: user!.id,
+  e.preventDefault();
+  if (!validateForm()) return;
+
+  try {
+    let existingClient = clients.find(c => c.cnic === formData.clientCnic);
+
+    if (!existingClient) {
+      await db.createClient({
+        name: formData.clientName,
+        cnic: formData.clientCnic,
+        password: 'default123',
+        type: 'Other' as const,
+        phone: '',
+        email: '',
+        notes: 'Auto-created from receipt',
       });
-      
-      resetForm();
-      window.location.reload();
-    } catch (error) {
-      console.error('Error creating receipt:', error);
-      alert('Error creating receipt. Please try again.');
     }
-  };
+
+    const newReceipt = {
+      ...formData,
+      amount: parseFloat(formData.amount),
+      date: new Date(formData.date),
+      createdBy: user!.id,
+    };
+
+    await createReceipt(newReceipt);
+    await syncReceiptToFirebase(newReceipt); // 🔥 SYNC TO FIREBASE
+
+    resetForm();
+  } catch (error) {
+    console.error('Error creating receipt:', error);
+    alert('Error creating receipt. Please try again.');
+  }
+};
+
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +117,6 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
       
       await db.updateReceipt(updatedReceipt);
       resetForm();
-      window.location.reload();
     } catch (error) {
       console.error('Error updating receipt:', error);
       alert('Error updating receipt');
@@ -139,7 +141,6 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
     if (confirm('Are you sure you want to delete this receipt?')) {
       try {
         await db.deleteReceipt(receiptId);
-        window.location.reload();
       } catch (error) {
         console.error('Error deleting receipt:', error);
         alert('Error deleting receipt');
