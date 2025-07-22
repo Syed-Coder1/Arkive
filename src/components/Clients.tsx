@@ -5,10 +5,11 @@ import { format } from 'date-fns';
 import { exportService } from '../services/export';
 import { db } from '../services/database';
 import {
+  getAllClientsFromFirebase,
   syncClientToFirebase,
   deleteClientFromFirebase,
-  getAllClientsFromFirebase
 } from '../firebaseClients';
+
 
 interface ClientsProps {
   showForm?: boolean;
