@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Eye, Download, Calendar, Edit, Trash2, Shield } from 'lucide-react';
 import { useClients, useReceipts } from '../hooks/useDatabase';
 import { format } from 'date-fns';
@@ -6,7 +6,8 @@ import { exportService } from '../services/export';
 import { db } from '../services/database';
 import {
   syncClientToFirebase,
-  deleteClientFromFirebase
+  deleteClientFromFirebase,
+  getAllClientsFromFirebase
 } from '../firebaseClients';
 
 interface ClientsProps {
@@ -15,7 +16,7 @@ interface ClientsProps {
 }
 
 export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProps) {
-  const { clients, createClient, loading } = useClients();
+  const { clients: localClients, createClient, loading } = useClients();
   const { getReceiptsByClient } = useReceipts();
   const [showForm, setShowForm] = useState(externalShowForm || false);
   const [showClientDetails, setShowClientDetails] = useState<string | null>(null);
@@ -23,8 +24,39 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
   const [filterType, setFilterType] = useState('');
   const [clientReceipts, setClientReceipts] = useState<any[]>([]);
   const [editingClient, setEditingClient] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
 
-  React.useEffect(() => {
+  // Sync clients from Firebase and merge with local clients
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const firebaseClients = await getAllClientsFromFirebase();
+        // Merge clients giving priority to firebase data
+        const mergedClients = [...localClients];
+        
+        firebaseClients.forEach(fbClient => {
+          const existingIndex = mergedClients.findIndex(c => c.id === fbClient.id);
+          if (existingIndex >= 0) {
+            // Update existing client with firebase data
+            mergedClients[existingIndex] = fbClient;
+          } else {
+            // Add new client from firebase
+            mergedClients.push(fbClient);
+          }
+        });
+
+        setClients(mergedClients);
+      } catch (error) {
+        console.error('Error fetching clients from Firebase:', error);
+        // Fallback to local clients if Firebase fails
+        setClients(localClients);
+      }
+    };
+
+    fetchClients();
+  }, [localClients]);
+
+  useEffect(() => {
     if (externalShowForm !== undefined) {
       setShowForm(externalShowForm);
     }
@@ -72,9 +104,9 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       setShowForm(false);
       alert('Client created successfully!');
      
-     if (onCloseForm) {
-       onCloseForm();
-     }
+      if (onCloseForm) {
+        onCloseForm();
+      }
     } catch (error) {
       console.error('Error creating client:', error);
       alert('Error creating client: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -118,8 +150,8 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       try {
         await db.deleteClient(clientId);
         await deleteClientFromFirebase(clientId);
-
-        window.location.reload();
+        // Update local state to reflect deletion
+        setClients(clients.filter(client => client.id !== clientId));
       } catch (error) {
         console.error('Error deleting client:', error);
         alert('Error deleting client');
@@ -152,6 +184,12 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       }
       
       await db.updateClient(updatedClient);
+      await syncClientToFirebase(updatedClient);
+      
+      // Update local state to reflect changes
+      setClients(clients.map(client => 
+        client.id === updatedClient.id ? updatedClient : client
+      ));
       
       setFormData({
         name: '',
@@ -164,7 +202,6 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       });
       setEditingClient(null);
       setShowForm(false);
-      window.location.reload();
     } catch (error) {
       console.error('Error updating client:', error);
       alert('Error updating client');
@@ -305,20 +342,20 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
                       >
                         <Edit size={16} />
                       </button>
-                    <button
-                      onClick={() => handleViewClient(client.id)}
+                      <button
+                        onClick={() => handleViewClient(client.id)}
                         className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
                         title="View Client Details"
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleExportClient(client)}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleExportClient(client)}
                         className="text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300"
                         title="Export Client Data"
-                    >
-                      <Download size={16} />
-                    </button>
+                      >
+                        <Download size={16} />
+                      </button>
                       <button
                         onClick={() => handleDelete(client.id)}
                         className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
@@ -337,178 +374,148 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
 
       {/* New Client Form Modal */}
       {showForm && (
-       <div className="fixed inset-0 bg-black bg-opacity-0 flex items-center justify-center z-50 p-4 min-h-screen overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 min-h-screen overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
               {editingClient ? 'Edit Client' : 'New Client'}
             </h2>
             <div className="max-h-[60vh] overflow-y-auto pr-2">
               <form onSubmit={editingClient ? handleUpdate : handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter client name"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter client name"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  CNIC *
-                </label>
-                <input
-                  type="text"
-                  value={formData.cnic}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 13);
-                    setFormData({ ...formData, cnic: value });
-                  }}
-                  placeholder="Enter 13-digit CNIC"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  maxLength={13}
-                  required
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Must be exactly 13 digits
-                </p>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    CNIC *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.cnic}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 13);
+                      setFormData({ ...formData, cnic: value });
+                    }}
+                    placeholder="Enter 13-digit CNIC"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    maxLength={13}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Must be exactly 13 digits
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Password {editingClient ? '(leave blank to keep current)' : '*'}
-                </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter password"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required={!editingClient}
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Password {editingClient ? '(leave blank to keep current)' : '*'}
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Enter password"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required={!editingClient}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type *
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
-                  <option value="IRIS">IRIS</option>
-                  <option value="SECP">SECP</option>
-                  <option value="PRA">PRA</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Type *
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  >
+                    <option value="IRIS">IRIS</option>
+                    <option value="SECP">SECP</option>
+                    <option value="PRA">PRA</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Enter phone number"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Enter email address"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Enter email address"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Additional notes"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Additional notes"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      if (onCloseForm) onCloseForm();
+                      setEditingClient(null);
+                      setFormData({
+                        name: '',
+                        cnic: '',
+                        password: '',
+                        type: 'Other',
+                        phone: '',
+                        email: '',
+                        notes: '',
+                      });
+                    }}
+                    className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {editingClient ? 'Update Client' : 'Create Client'}
+                  </button>
+                </div>
               </form>
             </div>
-
-            <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    if (onCloseForm) {
-                      onCloseForm();
-                    }
-                    setEditingClient(null);
-                    setFormData({
-                      name: '',
-                      cnic: '',
-                      password: '',
-                      type: 'Other',
-                      phone: '',
-                      email: '',
-                      notes: '',
-                    });
-                  }}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-                >
-                  Cancel
-                </button>
-                <form onSubmit={editingClient ? handleUpdate : handleSubmit} className="space-y-4">
-  {/* all your input fields here */}
-
-  <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-    <button
-      type="button"
-      onClick={() => {
-        setShowForm(false);
-        if (onCloseForm) onCloseForm();
-        setEditingClient(null);
-        setFormData({
-          name: '',
-          cnic: '',
-          password: '',
-          type: 'Other',
-          phone: '',
-          email: '',
-          notes: '',
-        });
-      }}
-      className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-    >
-      Cancel
-    </button>
-
-    <button
-      type="submit"
-      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-    >
-      {editingClient ? 'Update Client' : 'Create Client'}
-    </button>
-  </div>
-</form>
-
-              </div>
           </div>
         </div>
       )}
