@@ -301,7 +301,6 @@ export function Expenses({ showForm: externalShowForm, onCloseForm }: ExpensesPr
                 </div>
               </form>
             </div>
-              </div>
           </div>
         </div>
       )}
