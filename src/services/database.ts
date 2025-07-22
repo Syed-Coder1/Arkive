@@ -175,7 +175,25 @@ class DatabaseService {
     });
   }
 
+  async deleteUser(userId: string): Promise<void> {
+    const store = await this.getObjectStore('users', 'readwrite');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.delete(userId);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
   // Client operations
+  async clearStore(storeName: string): Promise<void> {
+    const store = await this.getObjectStore(storeName, 'readwrite');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
   async createClient(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<Client> {
     if (!this.db) {
       await this.init();
@@ -654,7 +672,12 @@ class DatabaseService {
     const expenses = await this.getAllExpenses();
     const activities = await this.getAllActivities();
     const notifications = await this.getAllNotifications();
-    const documents = await this.getAllDocuments();
+    let documents: Document[] = [];
+    try {
+      documents = await this.getAllDocuments();
+    } catch (error) {
+      console.warn('Documents not available for export:', error);
+    }
 
     const data = {
       users,
@@ -678,23 +701,31 @@ class DatabaseService {
     // Clear existing data
     const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
     for (const storeName of stores) {
-      const store = await this.getObjectStore(storeName, 'readwrite');
-      await new Promise<void>((resolve, reject) => {
-        const request = store.clear();
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
+      try {
+        const store = await this.getObjectStore(storeName, 'readwrite');
+        await new Promise<void>((resolve, reject) => {
+          const request = store.clear();
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      } catch (error) {
+        console.warn(`Store ${storeName} not available for clearing:`, error);
+      }
     }
 
     // Import new data
     const importStore = async (storeName: string, items: any[]) => {
-      const store = await this.getObjectStore(storeName, 'readwrite');
-      for (const item of items) {
-        await new Promise<void>((resolve, reject) => {
-          const request = store.add(item);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
+      try {
+        const store = await this.getObjectStore(storeName, 'readwrite');
+        for (const item of items) {
+          await new Promise<void>((resolve, reject) => {
+            const request = store.add(item);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+      } catch (error) {
+        console.warn(`Store ${storeName} not available for import:`, error);
       }
     };
 

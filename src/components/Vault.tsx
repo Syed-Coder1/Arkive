@@ -22,9 +22,60 @@ import {
 import { useDocuments, useClients } from '../hooks/useDatabase';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
-import { encryption } from '../services/encryption';
 import { Document } from '../types';
 
+// Simple encryption service inline
+const encryption = {
+  key: 'arkive-encryption-key-2025',
+  
+  encrypt(data: string): string {
+    let result = '';
+    for (let i = 0; i < data.length; i++) {
+      result += String.fromCharCode(
+        data.charCodeAt(i) ^ this.key.charCodeAt(i % this.key.length)
+      );
+    }
+    return btoa(result);
+  },
+  
+  decrypt(encryptedData: string): string {
+    try {
+      const data = atob(encryptedData);
+      let result = '';
+      for (let i = 0; i < data.length; i++) {
+        result += String.fromCharCode(
+          data.charCodeAt(i) ^ this.key.charCodeAt(i % this.key.length)
+        );
+      }
+      return result;
+    } catch (error) {
+      console.error('Decryption error:', error);
+      return '';
+    }
+  },
+  
+  async fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  },
+  
+  base64ToBlob(base64: string, mimeType: string): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
+  }
+};
 interface VaultProps {
   showUpload?: boolean;
   onCloseUpload?: () => void;

@@ -86,7 +86,11 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       const newId = crypto.randomUUID();
       const newClient = { ...formData, id: newId, createdAt: new Date() };
       await createClient(newClient);
-      await syncClientToFirebase(newClient);
+      try {
+        await syncClientToFirebase(newClient);
+      } catch (error) {
+        console.warn('Firebase sync failed:', error);
+      }
 
       setFormData({
         name: '',
@@ -145,7 +149,11 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
     if (confirm('Are you sure you want to delete this client? This will also delete all associated receipts.')) {
       try {
         await db.deleteClient(clientId);
-        await deleteClientFromFirebase(clientId);
+        try {
+          await deleteClientFromFirebase(clientId);
+        } catch (error) {
+          console.warn('Firebase delete failed:', error);
+        }
         setClients(clients.filter(client => client.id !== clientId));
       } catch (error) {
         console.error('Error deleting client:', error);
@@ -179,7 +187,11 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
       }
       
       await db.updateClient(updatedClient);
-      await syncClientToFirebase(updatedClient);
+      try {
+        await syncClientToFirebase(updatedClient);
+      } catch (error) {
+        console.warn('Firebase sync failed:', error);
+      }
       
       setClients(clients.map(client => 
         client.id === updatedClient.id ? updatedClient : client

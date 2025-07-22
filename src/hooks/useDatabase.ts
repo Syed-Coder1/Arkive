@@ -193,6 +193,7 @@ export function useDocuments() {
       setDocuments(data.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime()));
     } catch (error) {
       console.error('Error fetching documents:', error);
+      setDocuments([]); // Set empty array on error
     } finally {
       setLoading(false);
     }

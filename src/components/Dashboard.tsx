@@ -285,7 +285,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onPageChange, onOpenForm }
                             {notification.message}
                           </p>
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {format(new Date(notification.createdAt), 'MMM dd, yyyy HH:mm')}
+                            {format(notification.createdAt, 'MMM dd, yyyy HH:mm')}
                           </p>
                         </div>
                         {!notification.read && (

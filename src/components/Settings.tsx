@@ -229,12 +229,7 @@ const Settings: React.FC = () => {
       }
 
       // Delete user
-      const userStore = await db['getObjectStore']('users', 'readwrite');
-      await new Promise<void>((resolve, reject) => {
-        const request = userStore.delete(userId);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
+      await db.deleteUser(userId);
 
       // Log activity
       await db.createActivity({
@@ -293,14 +288,13 @@ const Settings: React.FC = () => {
     try {
       setLoading(true);
       
-      const stores = ['clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
+      const stores = ['clients', 'receipts', 'expenses', 'activities', 'notifications'];
       for (const storeName of stores) {
-        const store = await db['getObjectStore'](storeName, 'readwrite');
-        await new Promise<void>((resolve, reject) => {
-          const request = store.clear();
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
+        try {
+          await db.clearStore(storeName);
+        } catch (error) {
+          console.warn(`Could not clear store ${storeName}:`, error);
+        }
       }
 
       // Log activity

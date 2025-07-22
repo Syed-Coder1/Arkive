@@ -90,7 +90,11 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
     };
 
     await createReceipt(newReceipt);
-    await syncReceiptToFirebase(newReceipt); // 🔥 SYNC TO FIREBASE
+    try {
+      await syncReceiptToFirebase(newReceipt);
+    } catch (error) {
+      console.warn('Firebase sync failed:', error);
+    }
 
     resetForm();
   } catch (error) {
@@ -339,7 +343,7 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
 
       {/* New Receipt Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-0 flex items-center justify-center z-50 p-4 min-h-screen overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 min-h-screen overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto shadow-2xl border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
               {editingReceipt ? 'Edit Receipt' : 'New Receipt'}
