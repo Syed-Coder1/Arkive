@@ -29,33 +29,30 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
 
   // Sync clients from Firebase and merge with local clients
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const firebaseClients = await getAllClientsFromFirebase();
-        // Merge clients giving priority to firebase data
-        const mergedClients = [...localClients];
-        
-        firebaseClients.forEach(fbClient => {
-          const existingIndex = mergedClients.findIndex(c => c.id === fbClient.id);
-          if (existingIndex >= 0) {
-            // Update existing client with firebase data
-            mergedClients[existingIndex] = fbClient;
-          } else {
-            // Add new client from firebase
-            mergedClients.push(fbClient);
-          }
-        });
+  const fetchClients = async () => {
+    try {
+      const firebaseClients = await getAllClientsFromFirebase();
+      const mergedClients = [...localClients];
 
-        setClients(mergedClients);
-      } catch (error) {
-        console.error('Error fetching clients from Firebase:', error);
-        // Fallback to local clients if Firebase fails
-        setClients(localClients);
-      }
-    };
+      firebaseClients.forEach(fbClient => {
+        const existingIndex = mergedClients.findIndex(c => c.id === fbClient.id);
+        if (existingIndex >= 0) {
+          mergedClients[existingIndex] = fbClient;
+        } else {
+          mergedClients.push(fbClient);
+        }
+      });
 
-    fetchClients();
-  }, [localClients]);
+      setClients(mergedClients);
+    } catch (error) {
+      console.error('Error fetching clients from Firebase:', error);
+      setClients(localClients);
+    }
+  };
+
+  fetchClients();
+}, []);
+
 
   useEffect(() => {
     if (externalShowForm !== undefined) {
