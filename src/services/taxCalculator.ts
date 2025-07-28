@@ -96,10 +96,21 @@ class TaxCalculatorService {
 
   private readonly zakatRate = 0.025; // 2.5% Zakat
 
+  // Get all available tax categories
   getTaxCategories(): TaxCategory[] {
     return Object.values(this.taxCategories);
   }
 
+  // Get tax brackets for a specific category
+  getTaxBrackets(categoryId: string = 'salary'): TaxBracket[] {
+    const category = this.taxCategories[categoryId];
+    if (!category) {
+      throw new Error(`Tax category '${categoryId}' not found`);
+    }
+    return [...category.taxBrackets];
+  }
+
+  // Main tax calculation function
   calculateTax(
     categoryId: string,
     grossIncome: number,
@@ -158,6 +169,27 @@ class TaxCalculatorService {
     };
   }
 
+  // Calculate monthly breakdown from annual
+  calculateMonthlyFromAnnual(categoryId: string, annualIncome: number, includeZakat: boolean = false) {
+    const annual = this.calculateTax(categoryId, annualIncome, false, includeZakat);
+    
+    return {
+      ...annual,
+      monthly: {
+        grossIncome: annualIncome / 12,
+        totalTax: annual.totalTax / 12,
+        netIncome: annual.netIncome / 12
+      }
+    };
+  }
+
+  // Calculate annual from monthly
+  calculateAnnualFromMonthly(categoryId: string, monthlyIncome: number, includeZakat: boolean = false) {
+    const annualIncome = monthlyIncome * 12;
+    return this.calculateTax(categoryId, annualIncome, false, includeZakat);
+  }
+
+  // Get tax saving tips for a category
   getTaxSavingTips(categoryId: string, income: number): string[] {
     const category = this.taxCategories[categoryId];
     if (!category) {
@@ -173,17 +205,9 @@ class TaxCalculatorService {
     if (categoryId === 'salary') {
       tips.push('Contribute to approved pension funds (up to Rs. 150,000 annually)');
       tips.push('Invest in life insurance premiums (up to Rs. 100,000 annually)');
-      tips.push('Utilize tax credits for education expenses');
-    } else if (categoryId === 'pension') {
-      tips.push('Consider spreading pension income over multiple years if possible');
-      tips.push('Explore tax-exempt pension schemes');
     } else if (categoryId === 'business') {
       tips.push('Claim all legitimate business expenses');
-      tips.push('Consider incorporating your business for potential tax benefits');
-      tips.push('Make use of depreciation allowances on business assets');
-    } else if (categoryId === 'property') {
-      tips.push('Consider holding property for longer than 6 years for reduced capital gains');
-      tips.push('Explore tax exemptions for primary residence');
+      tips.push('Consider incorporating your business');
     }
 
     // Income-level specific tips
@@ -191,21 +215,7 @@ class TaxCalculatorService {
       tips.push('Consult with a tax professional for personalized advice');
     }
 
-    if (income > 5000000) {
-      tips.push('Consider setting up a family trust for estate planning');
-      tips.push('Explore tax-efficient investment vehicles');
-    }
-
     return tips;
-  }
-
-  // Generate comparison between different categories
-  compareCategories(income: number, isMonthly: boolean = false) {
-    const annualIncome = isMonthly ? income * 12 : income;
-    return Object.keys(this.taxCategories).map(categoryId => ({
-      category: this.taxCategories[categoryId].name,
-      calculation: this.calculateTax(categoryId, annualIncome, false, false)
-    }));
   }
 }
 
