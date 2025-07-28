@@ -939,15 +939,28 @@ class DatabaseService {
     await importStore('documents', data.documents || []);
   }
 
-       // Define stores to clear
-      const = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
+         async syncFromFirebase(): Promise<void> {
+    try {
+      // First fetch all data from Firebase
+      const [users, clients, receipts, expenses, activities, notifications, documents] = await Promise.all([
+        firebaseSync.getStoreFromFirebase('users'),
+        firebaseSync.getStoreFromFirebase('clients'),
+        firebaseSync.getStoreFromFirebase('receipts'),
+        firebaseSync.getStoreFromFirebase('expenses'),
+        firebaseSync.getStoreFromFirebase('activities'),
+        firebaseSync.getStoreFromFirebase('notifications'),
+        firebaseSync.getStoreFromFirebase('documents')
+      ]);
+
+      // Define stores to clear
+      const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
 
       // Clear existing data first
       for (const storeName of stores) {
         await this.clearStore(storeName);
       }
 
-      // Import Firebase data
+      // Helper function to import data
       const importStore = async (storeName: string, items: any[]) => {
         const store = await this.getObjectStore(storeName, 'readwrite');
         for (const item of items) {
@@ -959,7 +972,7 @@ class DatabaseService {
         }
       };
 
-      // Import new data from Firebase
+      // Import all data
       await Promise.all([
         importStore('users', users),
         importStore('clients', clients),
