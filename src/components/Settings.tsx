@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Database, Palette, Bell, Save, RefreshCw, UserPlus, Trash2, Eye, EyeOff, Check, X, Clock, Activity, AlertTriangle, Users, LogIn, LogOut, Calendar, Monitor, FolderSync as Sync, Wifi, WifiOff, Download, Upload, Settings as SettingsIcon, Moon, Sun, Globe } from 'lucide-react';
+import { 
+  User, Settings as SettingsIcon, Shield, Download, Upload, 
+  Trash2, Users, Moon, Sun, Monitor, Save, AlertCircle, CheckCircle, Wifi, WifiOff,
+  RefreshCw, Cloud, Database
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/database';
-import { format, formatDistanceToNow } from 'date-fns';
+import { firebaseSync } from '../services/firebaseSync';
+import { format } from 'date-fns';
 
 const Settings: React.FC = () => {
   const { user, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [users, setUsers] = useState<any[]>([]);
-  const [userSessions, setUserSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showCreateUser, setShowCreateUser] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [syncInProgress, setSyncInProgress] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ lastSync: Date | null; isOnline: boolean; queueLength: number }>({
+    lastSync: null,
+    isOnline: navigator.onLine,
+    queueLength: 0
+  });
+  const [syncing, setSyncing] = useState(false);
 
   // Profile settings
   const [profileData, setProfileData] = useState({
@@ -33,126 +38,40 @@ const Settings: React.FC = () => {
 
   // App settings
   const [appSettings, setAppSettings] = useState({
+    theme: 'system' as 'light' | 'dark' | 'system',
     notifications: true,
     autoBackup: false,
-    autoSync: true,
-    theme: 'system' as 'light' | 'dark' | 'system',
     language: 'en',
     sessionTimeout: 30,
-    maxLoginAttempts: 5,
-    syncInterval: 15, // minutes
-    dataRetention: 365, // days
-    enableAnalytics: true,
-    compressBackups: true
+    maxLoginAttempts: 5
   });
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-      fetchUserSessions();
-    }
-    loadSettings();
-    checkSyncStatus();
+    loadUsers();
+    loadSyncStatus();
     
-    // Monitor online status
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [isAdmin]);
+    // Update sync status periodically
+    const interval = setInterval(loadSyncStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const checkSyncStatus = async () => {
+  const loadSyncStatus = async () => {
     try {
-      const lastSync = await db.getLastSyncTime();
-      setLastSyncTime(lastSync);
+      const status = await db.getSyncStatus();
+      setSyncStatus(status);
     } catch (error) {
-      console.error('Error checking sync status:', error);
+      console.error('Error loading sync status:', error);
     }
   };
 
-  const handleSync = async () => {
-    setSyncInProgress(true);
-    try {
-      // Simulate sync process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await db.updateLastSyncTime();
-      await checkSyncStatus();
-      showMessage('Data synchronized successfully!', 'success');
-    } catch (error) {
-      console.error('Sync error:', error);
-      showMessage('Sync failed. Please try again.', 'error');
-    } finally {
-      setSyncInProgress(false);
-    }
-  };
-
-  const fetchUsers = async () => {
+  const loadUsers = async () => {
+    if (!isAdmin) return;
+    
     try {
       const allUsers = await db.getAllUsers();
-      setUsers(allUsers.map(user => ({
-        ...user,
-        isOnline: Math.random() > 0.5, // Simulate online status
-        lastActivity: new Date(Date.now() - Math.random() * 86400000), // Random last activity
-        loginCount: Math.floor(Math.random() * 100) + 1,
-        failedAttempts: Math.floor(Math.random() * 3)
-      })));
+      setUsers(allUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const fetchUserSessions = async () => {
-    try {
-      const activities = await db.getAllActivities();
-      const loginActivities = activities
-        .filter(a => a.action === 'login' || a.action === 'logout')
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-        .slice(0, 20);
-      
-      setUserSessions(loginActivities);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-    }
-  };
-
-  const loadSettings = () => {
-    const savedSettings = localStorage.getItem('appSettings');
-    if (savedSettings) {
-      setAppSettings({ ...appSettings, ...JSON.parse(savedSettings) });
-    }
-  };
-
-  const saveSettings = async () => {
-    setLoading(true);
-    try {
-      localStorage.setItem('appSettings', JSON.stringify(appSettings));
-      
-      // Apply theme immediately
-      if (appSettings.theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else if (appSettings.theme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        // System theme
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (prefersDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-      
-      showMessage('Settings saved successfully!', 'success');
-    } catch (error) {
-      showMessage('Error saving settings', 'error');
-    } finally {
-      setLoading(false);
+      console.error('Error loading users:', error);
     }
   };
 
@@ -188,14 +107,6 @@ const Settings: React.FC = () => {
       const updatedUser = { ...currentUser, password: profileData.newPassword };
       await db.updateUser(updatedUser);
 
-      // Log activity
-      await db.createActivity({
-        userId: user!.id,
-        action: 'password_change',
-        details: `User ${user!.username} changed their password`,
-        timestamp: new Date(),
-      });
-
       setProfileData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       showMessage('Password updated successfully!', 'success');
     } catch (error) {
@@ -224,15 +135,6 @@ const Settings: React.FC = () => {
         return;
       }
 
-      // Check admin limit
-      if (newUserData.role === 'admin') {
-        const adminCount = users.filter(u => u.role === 'admin').length;
-        if (adminCount >= 2) {
-          showMessage('Maximum number of admin accounts reached', 'error');
-          return;
-        }
-      }
-
       // Create user
       await db.createUser({
         username: newUserData.username,
@@ -241,17 +143,8 @@ const Settings: React.FC = () => {
         createdAt: new Date(),
       });
 
-      // Log activity
-      await db.createActivity({
-        userId: user!.id,
-        action: 'create_user',
-        details: `Admin ${user!.username} created ${newUserData.role} account for ${newUserData.username}`,
-        timestamp: new Date(),
-      });
-
       setNewUserData({ username: '', password: '', role: 'employee' });
-      setShowCreateUser(false);
-      fetchUsers();
+      loadUsers();
       showMessage('User created successfully!', 'success');
     } catch (error) {
       console.error('Error creating user:', error);
@@ -277,16 +170,7 @@ const Settings: React.FC = () => {
 
       // Delete user
       await db.deleteUser(userId);
-
-      // Log activity
-      await db.createActivity({
-        userId: user!.id,
-        action: 'delete_user',
-        details: `Admin ${user!.username} deleted user account: ${username}`,
-        timestamp: new Date(),
-      });
-
-      fetchUsers();
+      loadUsers();
       showMessage('User deleted successfully!', 'success');
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -296,29 +180,106 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleForceLogout = async (targetUserId: string, targetUsername: string) => {
-    if (!confirm(`Force logout user "${targetUsername}"?`)) {
+  const saveSettings = async () => {
+    setLoading(true);
+    try {
+      localStorage.setItem('appSettings', JSON.stringify(appSettings));
+      
+      // Apply theme immediately
+      if (appSettings.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (appSettings.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        // System theme
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      
+      showMessage('Settings saved successfully!', 'success');
+    } catch (error) {
+      showMessage('Error saving settings', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncToFirebase = async () => {
+    setSyncing(true);
+    try {
+      await db.syncToFirebase();
+      setMessage({ type: 'success', text: 'Data synced to Firebase successfully!' });
+      await loadSyncStatus();
+    } catch (error) {
+      console.error('Sync to Firebase failed:', error);
+      setMessage({ type: 'error', text: 'Failed to sync to Firebase. Please try again.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSyncFromFirebase = async () => {
+    if (!confirm('This will replace all local data with Firebase data. Are you sure?')) {
       return;
     }
+    
+    setSyncing(true);
+    try {
+      await db.syncFromFirebase();
+      setMessage({ type: 'success', text: 'Data synced from Firebase successfully!' });
+      await loadSyncStatus();
+      // Refresh the page to show updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Sync from Firebase failed:', error);
+      setMessage({ type: 'error', text: 'Failed to sync from Firebase. Please try again.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      setLoading(true);
+      const data = await db.exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `arkive-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showMessage('Data exported successfully!', 'success');
+    } catch (error) {
+      console.error('Export error:', error);
+      showMessage('Error exporting data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     try {
-      // Log the forced logout
-      await db.createActivity({
-        userId: user!.id,
-        action: 'force_logout',
-        details: `Admin ${user!.username} forced logout of user: ${targetUsername}`,
-        timestamp: new Date(),
-      });
-
-      // Update user status
-      setUsers(prev => prev.map(u => 
-        u.id === targetUserId ? { ...u, isOnline: false, lastActivity: new Date() } : u
-      ));
-
-      showMessage(`User ${targetUsername} has been logged out`, 'success');
+      setLoading(true);
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await db.importAllData(data);
+      showMessage('Data imported successfully!', 'success');
+      loadUsers();
     } catch (error) {
-      console.error('Error forcing logout:', error);
-      showMessage('Error forcing logout', 'error');
+      console.error('Import error:', error);
+      showMessage('Error importing data', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -334,25 +295,9 @@ const Settings: React.FC = () => {
 
     try {
       setLoading(true);
-      
-      const stores = ['clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
-      for (const storeName of stores) {
-        try {
-          await db.clearStore(storeName);
-        } catch (error) {
-          console.warn(`Could not clear store ${storeName}:`, error);
-        }
-      }
-
-      // Log activity
-      await db.createActivity({
-        userId: user!.id,
-        action: 'clear_all_data',
-        details: `Admin ${user!.username} cleared all application data`,
-        timestamp: new Date(),
-      });
-
+      await db.clearAllData();
       showMessage('All data cleared successfully!', 'success');
+      loadUsers();
     } catch (error) {
       console.error('Error clearing data:', error);
       showMessage('Error clearing data', 'error');
@@ -361,58 +306,16 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleExportSettings = () => {
-    const settingsData = {
-      appSettings,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
-    
-    const blob = new Blob([JSON.stringify(settingsData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `arkive-settings-${format(new Date(), 'yyyy-MM-dd')}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportSettings = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      
-      if (data.appSettings) {
-        setAppSettings({ ...appSettings, ...data.appSettings });
-        showMessage('Settings imported successfully!', 'success');
-      } else {
-        showMessage('Invalid settings file format', 'error');
-      }
-    } catch (error) {
-      showMessage('Error importing settings', 'error');
-    }
-  };
-
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'sync', label: 'Sync & Backup', icon: Sync },
-    ...(isAdmin ? [
-      { id: 'users', label: 'User Management', icon: Shield },
-      { id: 'monitoring', label: 'User Monitoring', icon: Monitor },
-      { id: 'sessions', label: 'Session Logs', icon: Activity }
-    ] : []),
+    { id: 'appearance', label: 'Appearance', icon: Monitor },
+    { id: 'sync', label: 'Sync & Backup', icon: Database },
+    { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon },
-    { id: 'data', label: 'Data Management', icon: Database },
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
@@ -421,36 +324,28 @@ const Settings: React.FC = () => {
           </p>
         </div>
         
-        {/* Sync Status */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm">
-            {isOnline ? (
-              <Wifi className="w-4 h-4 text-green-500" />
-            ) : (
-              <WifiOff className="w-4 h-4 text-red-500" />
-            )}
-            <span className={isOnline ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
-          </div>
-          
-          {lastSyncTime && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Last sync: {formatDistanceToNow(lastSyncTime, { addSuffix: true })}
-            </div>
+        {/* Connection Status */}
+        <div className="flex items-center gap-2 text-sm">
+          {syncStatus.isOnline ? (
+            <Wifi className="w-4 h-4 text-green-500" />
+          ) : (
+            <WifiOff className="w-4 h-4 text-red-500" />
           )}
+          <span className={syncStatus.isOnline ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+            {syncStatus.isOnline ? 'Online' : 'Offline'}
+          </span>
         </div>
       </div>
 
       {/* Message */}
       {message && (
-        <div className={`p-4 rounded-lg border animate-slideInRight ${
+        <div className={`p-4 rounded-lg border ${
           message.type === 'success' 
             ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
             : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
         }`}>
           <div className="flex items-center">
-            {message.type === 'success' ? <Check className="w-5 h-5 mr-2" /> : <X className="w-5 h-5 mr-2" />}
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5 mr-2" /> : <AlertCircle className="w-5 h-5 mr-2" />}
             {message.text}
           </div>
         </div>
@@ -459,21 +354,25 @@ const Settings: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex space-x-8 px-6 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            ))}
+          <nav className="flex space-x-8 px-6">
+            {tabs.map((tab) => {
+              if (tab.adminOnly && !isAdmin) return null;
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -506,28 +405,6 @@ const Settings: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white capitalize"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Account Created
-                    </label>
-                    <input
-                      type="text"
-                      value={user?.createdAt ? format(new Date(user.createdAt), 'PPP') : ''}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Last Login
-                    </label>
-                    <input
-                      type="text"
-                      value={user?.lastLogin ? format(new Date(user.lastLogin), 'PPp') : 'Never'}
-                      disabled
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -538,22 +415,13 @@ const Settings: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Current Password
                     </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={profileData.currentPassword}
-                        onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                    <input
+                      type="password"
+                      value={profileData.currentPassword}
+                      onChange={(e) => setProfileData({ ...profileData, currentPassword: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -640,25 +508,6 @@ const Settings: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-gray-900 dark:text-white">Enable Analytics</label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Help improve the app with usage analytics</p>
-                  </div>
-                  <button
-                    onClick={() => setAppSettings({ ...appSettings, enableAnalytics: !appSettings.enableAnalytics })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      appSettings.enableAnalytics ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        appSettings.enableAnalytics ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
                 <button
                   onClick={saveSettings}
                   disabled={loading}
@@ -674,143 +523,128 @@ const Settings: React.FC = () => {
           {/* Sync & Backup Tab */}
           {activeTab === 'sync' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Sync & Backup</h3>
-                <button
-                  onClick={handleSync}
-                  disabled={syncInProgress || !isOnline}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  <Sync className={`w-4 h-4 ${syncInProgress ? 'animate-spin' : ''}`} />
-                  {syncInProgress ? 'Syncing...' : 'Sync Now'}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+              {/* Sync Status */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Database className="w-5 h-5" />
+                  Sync Status
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3">
+                    {syncStatus.isOnline ? (
+                      <Wifi className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <WifiOff className="w-5 h-5 text-red-500" />
+                    )}
                     <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Auto Sync</label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Automatically sync data when online</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {syncStatus.isOnline ? 'Online' : 'Offline'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Connection Status
+                      </p>
                     </div>
-                    <button
-                      onClick={() => setAppSettings({ ...appSettings, autoSync: !appSettings.autoSync })}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        appSettings.autoSync ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          appSettings.autoSync ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
                   </div>
-
-                  <div className="flex items-center justify-between">
+                  
+                  <div className="flex items-center gap-3">
+                    <Cloud className="w-5 h-5 text-blue-500" />
                     <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Auto Backup</label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Automatically backup data daily</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {syncStatus.lastSync ? format(syncStatus.lastSync, 'MMM dd, HH:mm') : 'Never'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Last Sync
+                      </p>
                     </div>
-                    <button
-                      onClick={() => setAppSettings({ ...appSettings, autoBackup: !appSettings.autoBackup })}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        appSettings.autoBackup ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          appSettings.autoBackup ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
                   </div>
-
-                  <div className="flex items-center justify-between">
+                  
+                  <div className="flex items-center gap-3">
+                    <RefreshCw className="w-5 h-5 text-orange-500" />
                     <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-white">Compress Backups</label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Reduce backup file size</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {syncStatus.queueLength}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Pending Changes
+                      </p>
                     </div>
-                    <button
-                      onClick={() => setAppSettings({ ...appSettings, compressBackups: !appSettings.compressBackups })}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        appSettings.compressBackups ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          appSettings.compressBackups ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Sync Interval (minutes)
-                    </label>
-                    <input
-                      type="number"
-                      value={appSettings.syncInterval}
-                      onChange={(e) => setAppSettings({ ...appSettings, syncInterval: parseInt(e.target.value) })}
-                      min="5"
-                      max="60"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Data Retention (days)
-                    </label>
-                    <input
-                      type="number"
-                      value={appSettings.dataRetention}
-                      onChange={(e) => setAppSettings({ ...appSettings, dataRetention: parseInt(e.target.value) })}
-                      min="30"
-                      max="3650"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
                   </div>
                 </div>
               </div>
 
-              {/* Settings Import/Export */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Settings Backup</h4>
-                <div className="flex gap-4">
+              {/* Firebase Sync Controls */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Firebase Sync
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
-                    onClick={handleExportSettings}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    onClick={handleSyncToFirebase}
+                    disabled={syncing || !syncStatus.isOnline}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Download size={16} />
-                    Export Settings
+                    {syncing ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Upload className="w-5 h-5" />
+                    )}
+                    {syncing ? 'Syncing...' : 'Sync to Firebase'}
                   </button>
+                  
+                  <button
+                    onClick={handleSyncFromFirebase}
+                    disabled={syncing || !syncStatus.isOnline}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {syncing ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Download className="w-5 h-5" />
+                    )}
+                    {syncing ? 'Syncing...' : 'Sync from Firebase'}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                  Sync your data with Firebase for real-time collaboration across devices.
+                </p>
+              </div>
+
+              {/* Backup & Restore */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Backup & Restore
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={handleExportData}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    <Download className="w-5 h-5" />
+                    {loading ? 'Exporting...' : 'Export Data'}
+                  </button>
+                  
                   <div className="relative">
                     <input
                       type="file"
                       accept=".json"
-                      onChange={handleImportSettings}
+                      onChange={handleImportData}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={loading}
                     />
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                      <Upload size={16} />
-                      Import Settings
+                    <button
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      <Upload className="w-5 h-5" />
+                      {loading ? 'Importing...' : 'Import Data'}
                     </button>
                   </div>
                 </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                  Export your data for backup or import from a previous backup.
+                </p>
               </div>
-
-              <button
-                onClick={saveSettings}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                <Save size={16} />
-                {loading ? 'Saving...' : 'Save Sync Settings'}
-              </button>
             </div>
           )}
 
@@ -820,10 +654,10 @@ const Settings: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">User Management</h3>
                 <button
-                  onClick={() => setShowCreateUser(true)}
+                  onClick={() => setActiveTab('create-user')}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <UserPlus size={16} />
+                  <Users size={16} />
                   Create User
                 </button>
               </div>
@@ -833,19 +667,13 @@ const Settings: React.FC = () => {
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        User
+                        Username
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Role
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Created
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Last Login
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
@@ -855,16 +683,8 @@ const Settings: React.FC = () => {
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {users.map((u) => (
                       <tr key={u.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-3 ${u.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">{u.username}</div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {u.loginCount} logins • {u.failedAttempts} failed attempts
-                              </div>
-                            </div>
-                          </div>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {u.username}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -875,287 +695,90 @@ const Settings: React.FC = () => {
                             {u.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            u.isOnline 
-                              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                              : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'
-                          }`}>
-                            {u.isOnline ? 'Online' : 'Offline'}
-                          </span>
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {format(new Date(u.createdAt), 'MMM dd, yyyy')}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {u.lastLogin ? format(new Date(u.lastLogin), 'MMM dd, HH:mm') : 'Never'}
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            {u.isOnline && u.id !== user?.id && (
-                              <button
-                                onClick={() => handleForceLogout(u.id, u.username)}
-                                className="text-orange-600 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-300"
-                                title="Force Logout"
-                              >
-                                <LogOut size={16} />
-                              </button>
-                            )}
-                            {u.id !== user?.id && (
-                              <button
-                                onClick={() => handleDeleteUser(u.id, u.username)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                                title="Delete User"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
+                          {u.id !== user?.id && (
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.username)}
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-
-              {/* Create User Modal */}
-              {showCreateUser && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
-                    <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Create New User</h2>
-                    <form onSubmit={handleCreateUser} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Username
-                        </label>
-                        <input
-                          type="text"
-                          value={newUserData.username}
-                          onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                          minLength={3}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Password
-                        </label>
-                        <input
-                          type="password"
-                          value={newUserData.password}
-                          onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                          minLength={6}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Role
-                        </label>
-                        <select
-                          value={newUserData.role}
-                          onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value as any })}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="employee">Employee</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </div>
-                      <div className="flex gap-2 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setShowCreateUser(false)}
-                          className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        >
-                          {loading ? 'Creating...' : 'Create User'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* User Monitoring Tab */}
-          {activeTab === 'monitoring' && isAdmin && (
+          {/* Create User Form */}
+          {activeTab === 'create-user' && isAdmin && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">User Activity Monitoring</h3>
-              
-              {/* Real-time Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <Users className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Total Users</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <LogIn className="w-8 h-8 text-green-600 dark:text-green-400 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Online Now</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {users.filter(u => u.isOnline).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Failed Attempts</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {users.reduce((sum, u) => sum + u.failedAttempts, 0)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <Activity className="w-8 h-8 text-purple-600 dark:text-purple-400 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Total Logins</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {users.reduce((sum, u) => sum + u.loginCount, 0)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* User Activity Table */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h4 className="text-lg font-medium text-gray-900 dark:text-white">User Activity Details</h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">User</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Last Activity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Session Duration</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {users.map((u) => (
-                        <tr key={u.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className={`w-3 h-3 rounded-full mr-3 ${u.isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">{u.username}</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">{u.role}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              u.isOnline 
-                                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'
-                            }`}>
-                              {u.isOnline ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {formatDistanceToNow(u.lastActivity, { addSuffix: true })}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {u.isOnline ? formatDistanceToNow(u.lastActivity) : 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {u.isOnline && u.id !== user?.id && (
-                              <button
-                                onClick={() => handleForceLogout(u.id, u.username)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                              >
-                                Force Logout
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Session Logs Tab */}
-          {activeTab === 'sessions' && isAdmin && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Session Activity Logs</h3>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={fetchUserSessions}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setActiveTab('users')}
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                 >
-                  <RefreshCw size={16} />
-                  Refresh
+                  ← Back to Users
                 </button>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Timestamp</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">User</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Action</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Details</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {userSessions.map((session) => (
-                        <tr key={session.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {format(session.timestamp, 'MMM dd, yyyy HH:mm:ss')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                            {session.userId}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              session.action === 'login' 
-                                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                            }`}>
-                              {session.action === 'login' ? (
-                                <LogIn className="w-3 h-3 mr-1" />
-                              ) : (
-                                <LogOut className="w-3 h-3 mr-1" />
-                              )}
-                              {session.action}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                            {session.details}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Create New User</h3>
+              
+              <form onSubmit={handleCreateUser} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserData.username}
+                    onChange={(e) => setNewUserData({ ...newUserData, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                    minLength={3}
+                  />
                 </div>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newUserData.password}
+                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Role
+                  </label>
+                  <select
+                    value={newUserData.role}
+                    onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="employee">Employee</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  {loading ? 'Creating...' : 'Create User'}
+                </button>
+              </form>
             </div>
           )}
 
@@ -1179,6 +802,25 @@ const Settings: React.FC = () => {
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                         appSettings.notifications ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-gray-900 dark:text-white">Auto Backup</label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Automatically backup data daily</p>
+                  </div>
+                  <button
+                    onClick={() => setAppSettings({ ...appSettings, autoBackup: !appSettings.autoBackup })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      appSettings.autoBackup ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        appSettings.autoBackup ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>
@@ -1212,55 +854,13 @@ const Settings: React.FC = () => {
                   />
                 </div>
 
-                <button
-                  onClick={saveSettings}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  <Save size={16} />
-                  {loading ? 'Saving...' : 'Save Advanced Settings'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Data Management Tab */}
-          {activeTab === 'data' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Data Management</h3>
-              
-              <div className="space-y-4">
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-                    Database Statistics
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-yellow-700 dark:text-yellow-300">Users:</span>
-                      <span className="ml-2 font-medium">{users.length}</span>
-                    </div>
-                    <div>
-                      <span className="text-yellow-700 dark:text-yellow-300">Storage:</span>
-                      <span className="ml-2 font-medium">Local</span>
-                    </div>
-                    <div>
-                      <span className="text-yellow-700 dark:text-yellow-300">Encrypted:</span>
-                      <span className="ml-2 font-medium">Yes</span>
-                    </div>
-                    <div>
-                      <span className="text-yellow-700 dark:text-yellow-300">Backup:</span>
-                      <span className="ml-2 font-medium">{appSettings.autoBackup ? 'Enabled' : 'Manual'}</span>
-                    </div>
-                  </div>
-                </div>
-
                 {isAdmin && (
                   <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                     <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
                       Danger Zone
                     </h4>
                     <p className="text-sm text-red-700 dark:text-red-300 mb-4">
-                      This action will permanently delete all application data including clients, receipts, expenses, and activities.
+                      This action will permanently delete all application data.
                     </p>
                     <button
                       onClick={clearAllData}
@@ -1272,6 +872,15 @@ const Settings: React.FC = () => {
                     </button>
                   </div>
                 )}
+
+                <button
+                  onClick={saveSettings}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  {loading ? 'Saving...' : 'Save Advanced Settings'}
+                </button>
               </div>
             </div>
           )}
