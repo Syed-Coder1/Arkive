@@ -791,15 +791,15 @@ class DatabaseService {
             action
           });
           
-          await this.addToSyncQueue({
+          this.addToSyncQueue({
             type: 'update',
             store: 'documents',
             data: document
-          });
-          
-          const putRequest = store.put(document);
-          putRequest.onsuccess = () => resolve();
-          putRequest.onerror = () => reject(putRequest.error);
+          }).then(() => {
+            const putRequest = store.put(document);
+            putRequest.onsuccess = () => resolve();
+            putRequest.onerror = () => reject(putRequest.error);
+          }).catch(reject);
         } else {
           resolve();
         }
