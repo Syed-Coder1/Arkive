@@ -940,7 +940,7 @@ class DatabaseService {
   }
 
        // Define stores to clear
-      const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
+      const; = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
 
       // Clear existing data first
       for (const storeName of stores) {
