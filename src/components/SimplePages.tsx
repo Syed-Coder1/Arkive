@@ -309,12 +309,6 @@ export function Expenses({ showForm: externalShowForm, onCloseForm }: ExpensesPr
 }
 
 export function ActivityLog() {
-        )}
-      </div>
-    );
-  }
-
-export function ActivityLog() {
   const { activities, loading } = useActivities();
 
   if (loading) {
