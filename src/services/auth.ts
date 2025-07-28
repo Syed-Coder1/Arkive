@@ -7,8 +7,7 @@ class AuthService {
   async init(): Promise<void> {
     try {
       console.log('Auth: Initializing database...');
-      await db.init();
-      await db.initSync();
+      // Database initialization is now handled automatically
       console.log('Auth: Database initialized');
       
       // Create default admin account if no users exist
