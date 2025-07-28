@@ -939,48 +939,13 @@ class DatabaseService {
     await importStore('documents', data.documents || []);
   }
 
-  // Firebase sync methods
-  async syncToFirebase(): Promise<void> {
-    try {
-      const [users, clients, receipts, expenses, activities, notifications, documents] = await Promise.all([
-        this.getAllUsers(),
-        this.getAllClients(),
-        this.getAllReceipts(),
-        this.getAllExpenses(),
-        this.getAllActivities(),
-        this.getAllNotifications(),
-        this.getAllDocuments()
-      ]);
+       // Define stores to clear
+      const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
 
-      await Promise.all([
-        firebaseSync.syncStoreToFirebase('users', users),
-        firebaseSync.syncStoreToFirebase('clients', clients),
-        firebaseSync.syncStoreToFirebase('receipts', receipts),
-        firebaseSync.syncStoreToFirebase('expenses', expenses),
-        firebaseSync.syncStoreToFirebase('activities', activities),
-        firebaseSync.syncStoreToFirebase('notifications', notifications),
-        firebaseSync.syncStoreToFirebase('documents', documents)
-      ]);
-
-      await firebaseSync.performFullSync();
-    } catch (error) {
-      console.error('Firebase sync failed:', error);
-      throw error;
-    }
-  }
-
-  async syncFromFirebase(): Promise<void> {
-    try {
-      const [users, clients, receipts, expenses, activities, notifications, documents] = await Promise.all([
-        firebaseSync.getStoreFromFirebase('users'),
-        firebaseSync.getStoreFromFirebase('clients'),
-        firebaseSync.getStoreFromFirebase('receipts'),
-        firebaseSync.getStoreFromFirebase('expenses'),
-        firebaseSync.getStoreFromFirebase('activities'),
-        firebaseSync.getStoreFromFirebase('notifications'),
-        firebaseSync.getStoreFromFirebase('documents')
-      ]);
-}
+      // Clear existing data first
+      for (const storeName of stores) {
+        await this.clearStore(storeName);
+      }
 
       // Import Firebase data
       const importStore = async (storeName: string, items: any[]) => {
@@ -993,7 +958,8 @@ class DatabaseService {
           });
         }
       };
-      // Clear existing data and import from Firebase
+
+      // Import new data from Firebase
       await Promise.all([
         importStore('users', users),
         importStore('clients', clients),
@@ -1003,16 +969,15 @@ class DatabaseService {
         importStore('notifications', notifications),
         importStore('documents', documents)
       ]);
-      const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
     } catch (error) {
       console.error('Firebase sync from failed:', error);
       throw error;
     }
   }
-      for (const storeName of stores) {
+
   async getSyncStatus() {
     return await firebaseSync.getSyncStatus();
   }
-        await this.clearStore(storeName);
-      }
+}
+
 export const db = new DatabaseService();
