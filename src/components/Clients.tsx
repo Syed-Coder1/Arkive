@@ -11,8 +11,6 @@ interface ClientsProps {
 }
 
 export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProps) {
-  const { clients: localClients, createClient, loading } = useClients();
-  const { getReceiptsByClient } = useReceipts();
   const [showForm, setShowForm] = useState(externalShowForm || false);
   const [showClientDetails, setShowClientDetails] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +18,18 @@ export function Clients({ showForm: externalShowForm, onCloseForm }: ClientsProp
   const [clientReceipts, setClientReceipts] = useState<any[]>([]);
   const [editingClient, setEditingClient] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+const [clients, setClients] = useState<any[]>([]);
 
+useEffect(() => {
+  // real-time listener from Firebase
+  firebaseSync.setupRealtimeListener('clients', (data) => setClients(data));
+  return () => firebaseSync.removeRealtimeListener('clients');
+}, []);
+
+// receipts helper (keep simple)
+const getReceiptsByClient = (cnic: string) =>
+  firebaseSync.getStoreFromFirebase('receipts')
+    .then((r) => r.filter((x: any) => x.clientCnic === cnic));
   // Sync clients from Firebase and merge with local clients
   useEffect(() => {
     const fetchClients = async () => {
