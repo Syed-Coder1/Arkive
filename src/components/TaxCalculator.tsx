@@ -1,447 +1,211 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingUp, 
-  Info, 
-  PieChart, 
-  FileText, 
-  Lightbulb, 
-  ArrowLeft,
-  Building,
-  Users,
-  Home,
-  Briefcase
-} from 'lucide-react';
-import { taxCalculator, TaxCalculation, TaxCategory } from '../services/taxCalculator';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Briefcase, Calculator, DollarSign, Home, Info, Lightbulb, PieChart as PieIcon, TrendingUp, Users } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { taxCalculator, TaxCalculation } from '../services/taxCalculator';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
-export function TaxCalculator() {
-  const [currentStep, setCurrentStep] = useState<'category' | 'calculator'>('category');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [incomeType, setIncomeType] = useState<'monthly' | 'annual'>('monthly');
-  const [income, setIncome] = useState('');
+export const TaxCalculator: React.FC = () => {
+  /* ---------- local state ---------- */
+  const [step, setStep] = useState<'category' | 'calc'>('category');
+  const [categoryId, setCategoryId] = useState('');
+  const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [rawInput, setRawInput] = useState('');
   const [includeZakat, setIncludeZakat] = useState(false);
-  const [calculation, setCalculation] = useState<TaxCalculation | null>(null);
 
+  /* ---------- numeric value (comma stripped) ---------- */
+  const income = useMemo(() => {
+    const n = Number(rawInput.replace(/[^\d]/g, ''));
+    return isNaN(n) ? 0 : n;
+  }, [rawInput]);
+
+  /* ---------- calculation ---------- */
+  const result: TaxCalculation | null = useMemo(() => {
+    if (!categoryId || income <= 0) return null;
+    return taxCalculator.calculateTax(categoryId, income, period === 'monthly', includeZakat);
+  }, [categoryId, income, period, includeZakat]);
+
+  /* ---------- helpers ---------- */
+  const fmt = (n: number) => taxCalculator.formatCurrency(n);
   const categories = taxCalculator.getTaxCategories();
 
-  useEffect(() => {
-    if (income && parseFloat(income) > 0 && selectedCategory) {
-      const incomeAmount = parseFloat(income);
-      const result = taxCalculator.calculateTax(selectedCategory, incomeAmount, incomeType === 'monthly', includeZakat);
-      setCalculation(result);
-    } else {
-      setCalculation(null);
-    }
-  }, [income, incomeType, includeZakat, selectedCategory]);
-
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setCurrentStep('calculator');
-  };
-
-  const handleBackToCategories = () => {
-    setCurrentStep('category');
-    setSelectedCategory('');
-    setIncome('');
-    setCalculation(null);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `PKR ${amount.toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
-  };
-
-  const getCategoryIcon = (categoryId: string) => {
-    switch (categoryId) {
-      case 'salary': return Users;
-      case 'pension': return Users;
-      case 'business': return Briefcase;
-      case 'property': return Home;
-      default: return Building;
-    }
-  };
-
-  const getCategoryColor = (categoryId: string) => {
-    switch (categoryId) {
-      case 'salary': return 'from-blue-500 to-blue-600';
-      case 'pension': return 'from-green-500 to-green-600';
-      case 'business': return 'from-purple-500 to-purple-600';
-      case 'property': return 'from-orange-500 to-orange-600';
-      default: return 'from-gray-500 to-gray-600';
-    }
-  };
-
-  const pieData = calculation ? [
-    { name: 'Net Income', value: calculation.netIncome, color: '#10B981' },
-    { name: 'Total Tax', value: calculation.totalTax, color: '#EF4444' },
-  ] : [];
-
-  const bracketData = selectedCategory ? taxCalculator.getTaxBrackets(selectedCategory).map((bracket, index) => ({
-    bracket: `${formatCurrency(bracket.min)} - ${bracket.max ? formatCurrency(bracket.max) : 'Above'}`,
-    rate: bracket.rate * 100,
-    color: COLORS[index % COLORS.length]
-  })) : [];
-
-  if (currentStep === 'category') {
+  /* ---------- category picker ---------- */
+  if (step === 'category') {
     return (
       <div className="space-y-6 animate-fadeIn">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-3 mb-4">
             <Calculator className="w-8 h-8 text-blue-600" />
-            Pakistan Tax Calculator
+            Pakistan Tax Calculator 2025-26
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Calculate your income tax based on Finance Act 2025-26 regulations. 
-            Select your income category to get started.
+            Select your income category to begin.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {categories.map((category) => {
-            const Icon = getCategoryIcon(category.id);
-            const colorClass = getCategoryColor(category.id);
-            
+          {categories.map((c) => {
+            const Icon = c.id === 'salary' || c.id === 'pension' ? Users :
+                         c.id === 'business' ? Briefcase :
+                         c.id.startsWith('property') ? Home : Calculator;
             return (
               <button
-                key={category.id}
-                onClick={() => handleCategorySelect(category.id)}
-                className={`bg-gradient-to-br ${colorClass} text-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-left group`}
+                key={c.id}
+                onClick={() => { setCategoryId(c.id); setStep('calc'); }}
+                className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow hover:shadow-lg transform hover:scale-105 transition"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors duration-300">
-                    <Icon className="w-8 h-8" />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm opacity-75">Tax Year</div>
-                    <div className="font-bold">2025-26</div>
-                  </div>
-                </div>
-                
-                <h3 className="text-xl font-bold mb-2 group-hover:text-white/90 transition-colors duration-300">
-                  {category.name}
-                </h3>
-                
-                <p className="text-white/80 text-sm leading-relaxed group-hover:text-white/70 transition-colors duration-300">
-                  {category.description}
-                </p>
-                
-                <div className="mt-4 pt-4 border-t border-white/20">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="opacity-75">Standard Deduction:</span>
-                    <span className="font-semibold">{formatCurrency(category.standardDeduction)}</span>
-                  </div>
-                  {category.hasZakat && (
-                    <div className="flex items-center justify-between text-sm mt-1">
-                      <span className="opacity-75">Zakat Applicable:</span>
-                      <span className="font-semibold">Yes (2.5%)</span>
-                    </div>
-                  )}
-                </div>
+                <Icon className="w-10 h-10 mb-3" />
+                <h3 className="text-xl font-bold">{c.name}</h3>
+                <p className="text-sm opacity-90">{c.description}</p>
               </button>
             );
           })}
-        </div>
-
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 max-w-4xl mx-auto">
-          <div className="flex items-start gap-3">
-            <Info className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                Finance Act 2025-26 Updates
-              </h3>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Updated tax brackets and rates for Tax Year 2025-26</li>
-                <li>• Enhanced standard deductions for salaried individuals</li>
-                <li>• Special rates for pensioners and senior citizens</li>
-                <li>• Revised property transaction tax rates under Section 236C & K</li>
-              </ul>
-            </div>
-          </div>
         </div>
       </div>
     );
   }
 
-  const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
+  /* ---------- calculation screen ---------- */
+  const cat = categories.find((c) => c.id === categoryId)!;
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleBackToCategories}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Categories
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {selectedCategoryData?.name} Tax Calculator
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Finance Act 2025-26 • {selectedCategoryData?.description}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* back bar */}
+      <button
+        onClick={() => { setStep('category'); setRawInput(''); }}
+        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+      >
+        <ArrowLeft size={16} /> Back to Categories
+      </button>
 
-      {/* Input Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Income Details</h2>
-        
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{cat.name} Tax Calculator</h1>
+
+      {/* === INPUT CARD === */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 shadow">
+        <h2 className="text-lg font-semibold">Income Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Income Period
-            </label>
-            <select
-              value={incomeType}
-              onChange={(e) => setIncomeType(e.target.value as 'monthly' | 'annual')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="monthly">Monthly Income</option>
-              <option value="annual">Annual Income</option>
+            <label className="block text-sm font-medium mb-1">Period</label>
+            <select value={period} onChange={(e) => setPeriod(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+              <option value="monthly">Monthly</option>
+              <option value="annual">Annual</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {incomeType === 'monthly' ? 'Monthly' : 'Annual'} Income
+            <label className="block text-sm font-medium mb-1">
+              {period === 'monthly' ? 'Monthly' : 'Annual'} Income (PKR)
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                value={income}
-                onChange={(e) => {
-                  // Allow only numbers and commas
-                  const value = e.target.value.replace(/[^\d,]/g, '');
-                  // Format with commas
-                  const formatted = value.replace(/,/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                  setIncome(formatted);
-                }}
-                placeholder={`Enter ${incomeType} income`}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                value={rawInput}
+                onChange={(e) => setRawInput(e.target.value)}
+                placeholder="e.g. 130,000"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
               />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Enter amount in PKR (e.g., 100,000)
-            </p>
           </div>
 
-          {selectedCategoryData?.hasZakat && (
+          {cat.hasZakat && (
             <div className="flex items-center">
-              <div className="flex items-center h-full">
-                <input
-                  type="checkbox"
-                  id="includeZakat"
-                  checked={includeZakat}
-                  onChange={(e) => setIncludeZakat(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <label htmlFor="includeZakat" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Include Zakat (2.5%)
-                </label>
-              </div>
+              <input
+                id="zakat"
+                type="checkbox"
+                checked={includeZakat}
+                onChange={(e) => setIncludeZakat(e.target.checked)}
+                className="h-4 w-4 text-blue-600"
+              />
+              <label htmlFor="zakat" className="ml-2 text-sm">Include Zakat (2.5 %)</label>
             </div>
           )}
         </div>
       </div>
 
-      {calculation && (
+      {/* === RESULTS === */}
+      {result && (
         <>
-          {/* Results Summary */}
+          {/* summary cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Gross Income</p>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                    {formatCurrency(calculation.grossIncome)}
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Annual</p>
+            {[
+              { label: 'Gross Income', value: fmt(result.grossIncome), icon: TrendingUp, color: 'blue' },
+              { label: 'Total Tax', value: fmt(result.totalTax), icon: DollarSign, color: 'red' },
+              { label: 'Net Income', value: fmt(result.netIncome), icon: DollarSign, color: 'green' },
+              { label: 'Monthly Net', value: fmt(result.netIncome / 12), icon: DollarSign, color: 'purple' },
+            ].map((c, i) => (
+              <div key={i} className={`bg-${c.color}-50 dark:bg-${c.color}-900/20 p-4 rounded-xl border`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{c.label}</p>
+                    <p className="text-2xl font-bold">{c.value}</p>
+                  </div>
+                  <c.icon className={`w-8 h-8 text-${c.color}-500`} />
                 </div>
-                <TrendingUp className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
-            </div>
-
-            <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-xl border border-red-200 dark:border-red-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">Total Tax</p>
-                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                    {formatCurrency(calculation.totalTax)}
-                  </p>
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                    {calculation.effectiveRate.toFixed(2)}% effective rate
-                  </p>
-                </div>
-                <FileText className="w-8 h-8 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-
-            <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-200 dark:border-green-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">Net Income</p>
-                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                    {formatCurrency(calculation.netIncome)}
-                  </p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">After tax</p>
-                </div>
-                <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-
-            <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-xl border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Monthly Net</p>
-                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                    {formatCurrency(calculation.netIncome / 12)}
-                  </p>
-                  <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Take home</p>
-                </div>
-                <Calculator className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Income Distribution */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <PieChart className="w-5 h-5" />
-                Income Distribution
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <RechartsPieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Tax Brackets */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Tax Brackets ({selectedCategoryData?.name})
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={bracketData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="bracket" 
-                    tick={{ fontSize: 10 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={100}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => `${value}%`} />
-                  <Bar dataKey="rate" fill="#3B82F6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          {/* pie chart */}
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><PieIcon size={20}/>Income Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Net Income', value: result.netIncome },
+                    { name: 'Total Tax', value: result.totalTax },
+                  ]}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                >
+                  <Cell fill="#10B981" />
+                  <Cell fill="#EF4444" />
+                </Pie>
+                <Tooltip formatter={(v: number) => fmt(v)} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
 
-          {/* Tax Breakdown */}
-          {calculation.breakdown.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Tax Calculation Breakdown
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        Income Range
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        Tax Rate
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        Taxable Amount
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                        Tax Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {calculation.breakdown.map((item, index) => (
-                      <tr key={index}>
-                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                          {formatCurrency(item.bracket.min)} - {item.bracket.max ? formatCurrency(item.bracket.max) : 'Above'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                          {(item.bracket.rate * 100).toFixed(1)}%
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                          {formatCurrency(item.taxableAmount)}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">
-                          {formatCurrency(item.taxAmount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {/* bar chart */}
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+            <h3 className="text-lg font-semibold mb-2">Tax Brackets ({cat.name})</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={cat.taxBrackets.map((b, i) => ({
+                range: `${fmt(b.min)} - ${b.max ? fmt(b.max) : '∞'}`,
+                rate: b.rate * 100,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="range" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+                <YAxis tick={{ fontSize: 12 }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v}%`} />
+                <Bar dataKey="rate" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-          {/* Tax Saving Tips */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-yellow-500" />
-              Tax Saving Tips for {selectedCategoryData?.name}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {taxCalculator.getTaxSavingTips(selectedCategory, calculation.grossIncome).map((tip, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{tip}</p>
-                </div>
+          {/* saving tips */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Lightbulb className="w-5 h-5 text-yellow-500"/>Tax-saving Tips</h3>
+            <ul className="space-y-1 text-sm">
+              {taxCalculator.getTaxSavingTips(categoryId, income).map((t, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></span>
+                  <span>{t}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
-          {/* Disclaimer */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                <p className="font-medium mb-1">Important Disclaimer:</p>
-                <p>
-                  This calculator provides estimates based on Finance Act 2025-26 tax rates. 
-                  Actual tax calculations may vary based on additional factors, deductions, and exemptions. 
-                  Please consult a qualified tax advisor for accurate tax planning and filing.
-                </p>
-              </div>
-            </div>
+          {/* disclaimer */}
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 text-sm">
+            <Info className="inline w-4 h-4 mr-1" />
+            Disclaimer: Estimates per Finance Act 2025-26. Consult a qualified tax advisor for precise filing.
           </div>
         </>
       )}
     </div>
   );
-}
+};
