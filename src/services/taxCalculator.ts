@@ -189,6 +189,21 @@ class TaxCalculatorService {
     return this.calculateTax(categoryId, annualIncome, false, includeZakat);
   }
 
+  // Calculate scenarios for comparison
+  calculateScenarios(baseIncome: number) {
+    const scenarios = [
+      { label: '10% Less', multiplier: 0.9 },
+      { label: 'Current', multiplier: 1.0 },
+      { label: '10% More', multiplier: 1.1 },
+      { label: '25% More', multiplier: 1.25 }
+    ];
+
+    return scenarios.map(scenario => ({
+      label: scenario.label,
+      calculation: this.calculateTax('salary', baseIncome * scenario.multiplier, false, false)
+    }));
+  }
+
   // Get tax saving tips for a category
   getTaxSavingTips(categoryId: string, income: number): string[] {
     const category = this.taxCategories[categoryId];
@@ -200,22 +215,37 @@ class TaxCalculatorService {
     
     // General tips for all categories
     tips.push('Maintain proper financial records and documentation');
+    tips.push('File your tax return on time to avoid penalties');
     
     // Category-specific tips
     if (categoryId === 'salary') {
-      tips.push('Contribute to approved pension funds (up to Rs. 150,000 annually)');
-      tips.push('Invest in life insurance premiums (up to Rs. 100,000 annually)');
+      tips.push('Contribute to approved pension funds (up to PKR 150,000 annually)');
+      tips.push('Invest in life insurance premiums (up to PKR 100,000 annually)');
+      tips.push('Claim medical expenses and education allowances');
     } else if (categoryId === 'business') {
       tips.push('Claim all legitimate business expenses');
-      tips.push('Consider incorporating your business');
+      tips.push('Consider incorporating your business for tax benefits');
+      tips.push('Maintain proper books of accounts');
+    } else if (categoryId === 'pension') {
+      tips.push('Take advantage of higher tax-free threshold for pensioners');
+      tips.push('Consider pension fund contributions for additional savings');
+    } else if (categoryId === 'property') {
+      tips.push('Keep proper documentation of property transactions');
+      tips.push('Consider holding period for capital gains tax benefits');
     }
 
     // Income-level specific tips
     if (income > 2000000) {
-      tips.push('Consult with a tax professional for personalized advice');
+      tips.push('Consult with a qualified tax advisor for advanced planning');
+      tips.push('Consider tax-efficient investment options');
     }
 
     return tips;
+  }
+
+  // Format currency in Pakistani Rupees
+  formatCurrency(amount: number): string {
+    return `PKR ${amount.toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
   }
 }
 

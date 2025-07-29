@@ -1,65 +1,191 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, DollarSign, TrendingUp, Info, PieChart, FileText, Lightbulb } from 'lucide-react';
-import { taxCalculator, TaxCalculation } from '../services/taxCalculator';
+import { 
+  Calculator, 
+  DollarSign, 
+  TrendingUp, 
+  Info, 
+  PieChart, 
+  FileText, 
+  Lightbulb, 
+  ArrowLeft,
+  Building,
+  Users,
+  Home,
+  Briefcase
+} from 'lucide-react';
+import { taxCalculator, TaxCalculation, TaxCategory } from '../services/taxCalculator';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export function TaxCalculator() {
+  const [currentStep, setCurrentStep] = useState<'category' | 'calculator'>('category');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [incomeType, setIncomeType] = useState<'monthly' | 'annual'>('monthly');
   const [income, setIncome] = useState('');
   const [includeZakat, setIncludeZakat] = useState(false);
   const [calculation, setCalculation] = useState<TaxCalculation | null>(null);
-  const [scenarios, setScenarios] = useState<any[]>([]);
+
+  const categories = taxCalculator.getTaxCategories();
 
   useEffect(() => {
-    if (income && parseFloat(income) > 0) {
+    if (income && parseFloat(income) > 0 && selectedCategory) {
       const incomeAmount = parseFloat(income);
-      let result;
-      
-      if (incomeType === 'monthly') {
-        result = taxCalculator.calculateAnnualFromMonthly(incomeAmount, includeZakat);
-      } else {
-        result = taxCalculator.calculateMonthlyFromAnnual(incomeAmount, includeZakat);
-      }
-      
+      const result = taxCalculator.calculateTax(selectedCategory, incomeAmount, incomeType === 'monthly', includeZakat);
       setCalculation(result);
-      
-      // Calculate scenarios based on annual income
-      const annualIncome = incomeType === 'monthly' ? incomeAmount * 12 : incomeAmount;
-      setScenarios(taxCalculator.calculateScenarios(annualIncome));
     } else {
       setCalculation(null);
-      setScenarios([]);
     }
-  }, [income, incomeType, includeZakat]);
+  }, [income, incomeType, includeZakat, selectedCategory]);
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setCurrentStep('calculator');
+  };
+
+  const handleBackToCategories = () => {
+    setCurrentStep('category');
+    setSelectedCategory('');
+    setIncome('');
+    setCalculation(null);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `PKR ${amount.toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
+  };
+
+  const getCategoryIcon = (categoryId: string) => {
+    switch (categoryId) {
+      case 'salary': return Users;
+      case 'pension': return Users;
+      case 'business': return Briefcase;
+      case 'property': return Home;
+      default: return Building;
+    }
+  };
+
+  const getCategoryColor = (categoryId: string) => {
+    switch (categoryId) {
+      case 'salary': return 'from-blue-500 to-blue-600';
+      case 'pension': return 'from-green-500 to-green-600';
+      case 'business': return 'from-purple-500 to-purple-600';
+      case 'property': return 'from-orange-500 to-orange-600';
+      default: return 'from-gray-500 to-gray-600';
+    }
+  };
 
   const pieData = calculation ? [
     { name: 'Net Income', value: calculation.netIncome, color: '#10B981' },
-    { name: 'Income Tax', value: calculation.totalTax, color: '#EF4444' },
+    { name: 'Total Tax', value: calculation.totalTax, color: '#EF4444' },
   ] : [];
 
-  const bracketData = taxCalculator.getTaxBrackets().map((bracket, index) => ({
-    bracket: `${(bracket.min / 1000).toFixed(0)}K - ${bracket.max ? (bracket.max / 1000).toFixed(0) + 'K' : 'Above'}`,
+  const bracketData = selectedCategory ? taxCalculator.getTaxBrackets(selectedCategory).map((bracket, index) => ({
+    bracket: `${formatCurrency(bracket.min)} - ${bracket.max ? formatCurrency(bracket.max) : 'Above'}`,
     rate: bracket.rate * 100,
     color: COLORS[index % COLORS.length]
-  }));
+  })) : [];
 
-  const formatCurrency = (amount: number) => {
-    return `Rs. ${amount.toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
-  };
+  if (currentStep === 'category') {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-3 mb-4">
+            <Calculator className="w-8 h-8 text-blue-600" />
+            Pakistan Tax Calculator
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Calculate your income tax based on Finance Act 2025-26 regulations. 
+            Select your income category to get started.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {categories.map((category) => {
+            const Icon = getCategoryIcon(category.id);
+            const colorClass = getCategoryColor(category.id);
+            
+            return (
+              <button
+                key={category.id}
+                onClick={() => handleCategorySelect(category.id)}
+                className={`bg-gradient-to-br ${colorClass} text-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-left group`}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors duration-300">
+                    <Icon className="w-8 h-8" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm opacity-75">Tax Year</div>
+                    <div className="font-bold">2025-26</div>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold mb-2 group-hover:text-white/90 transition-colors duration-300">
+                  {category.name}
+                </h3>
+                
+                <p className="text-white/80 text-sm leading-relaxed group-hover:text-white/70 transition-colors duration-300">
+                  {category.description}
+                </p>
+                
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="opacity-75">Standard Deduction:</span>
+                    <span className="font-semibold">{formatCurrency(category.standardDeduction)}</span>
+                  </div>
+                  {category.hasZakat && (
+                    <div className="flex items-center justify-between text-sm mt-1">
+                      <span className="opacity-75">Zakat Applicable:</span>
+                      <span className="font-semibold">Yes (2.5%)</span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 max-w-4xl mx-auto">
+          <div className="flex items-start gap-3">
+            <Info className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                Finance Act 2025-26 Updates
+              </h3>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                <li>• Updated tax brackets and rates for Tax Year 2025-26</li>
+                <li>• Enhanced standard deductions for salaried individuals</li>
+                <li>• Special rates for pensioners and senior citizens</li>
+                <li>• Revised property transaction tax rates under Section 236C & K</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
 
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Calculator className="w-7 h-7 text-blue-600" />
-            Pakistan Tax Calculator
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Calculate your income tax based on FBR regulations (Tax Year 2024-25)
-          </p>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleBackToCategories}
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Categories
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {selectedCategoryData?.name} Tax Calculator
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Finance Act 2025-26 • {selectedCategoryData?.description}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -70,7 +196,7 @@ export function TaxCalculator() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Income Type
+              Income Period
             </label>
             <select
               value={incomeType}
@@ -84,35 +210,45 @@ export function TaxCalculator() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {incomeType === 'monthly' ? 'Monthly' : 'Annual'} Income (Rs.)
+              {incomeType === 'monthly' ? 'Monthly' : 'Annual'} Income
             </label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
               <input
-                type="number"
+                type="text"
                 value={income}
-                onChange={(e) => setIncome(e.target.value)}
+                onChange={(e) => {
+                  // Allow only numbers and commas
+                  const value = e.target.value.replace(/[^\d,]/g, '');
+                  // Format with commas
+                  const formatted = value.replace(/,/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                  setIncome(formatted);
+                }}
                 placeholder={`Enter ${incomeType} income`}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                min="0"
               />
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Enter amount in PKR (e.g., 100,000)
+            </p>
           </div>
 
-          <div className="flex items-center">
-            <div className="flex items-center h-full">
-              <input
-                type="checkbox"
-                id="includeZakat"
-                checked={includeZakat}
-                onChange={(e) => setIncludeZakat(e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <label htmlFor="includeZakat" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Include Zakat (2.5%)
-              </label>
+          {selectedCategoryData?.hasZakat && (
+            <div className="flex items-center">
+              <div className="flex items-center h-full">
+                <input
+                  type="checkbox"
+                  id="includeZakat"
+                  checked={includeZakat}
+                  onChange={(e) => setIncludeZakat(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="includeZakat" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Include Zakat (2.5%)
+                </label>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -207,17 +343,17 @@ export function TaxCalculator() {
             {/* Tax Brackets */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                FBR Tax Brackets (2024-25)
+                Tax Brackets ({selectedCategoryData?.name})
               </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={bracketData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="bracket" 
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 10 }}
                     angle={-45}
                     textAnchor="end"
-                    height={80}
+                    height={100}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(value: number) => `${value}%`} />
@@ -274,52 +410,14 @@ export function TaxCalculator() {
             </div>
           )}
 
-          {/* Income Scenarios */}
-          {scenarios.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Income Scenarios Comparison
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {scenarios.map((scenario, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                      {scenario.label}
-                    </h4>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Gross:</span>
-                        <span className="text-gray-900 dark:text-white">
-                          {formatCurrency(scenario.calculation.grossIncome)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Tax:</span>
-                        <span className="text-red-600 dark:text-red-400">
-                          {formatCurrency(scenario.calculation.totalTax)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between font-medium">
-                        <span className="text-gray-600 dark:text-gray-400">Net:</span>
-                        <span className="text-green-600 dark:text-green-400">
-                          {formatCurrency(scenario.calculation.netIncome)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Tax Saving Tips */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Lightbulb className="w-5 h-5 text-yellow-500" />
-              Tax Saving Tips
+              Tax Saving Tips for {selectedCategoryData?.name}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {taxCalculator.getTaxSavingTips(calculation.grossIncome).map((tip, index) => (
+              {taxCalculator.getTaxSavingTips(selectedCategory, calculation.grossIncome).map((tip, index) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">{tip}</p>
@@ -335,7 +433,7 @@ export function TaxCalculator() {
               <div className="text-sm text-yellow-800 dark:text-yellow-200">
                 <p className="font-medium mb-1">Important Disclaimer:</p>
                 <p>
-                  This calculator provides estimates based on FBR tax rates for Tax Year 2024-25. 
+                  This calculator provides estimates based on Finance Act 2025-26 tax rates. 
                   Actual tax calculations may vary based on additional factors, deductions, and exemptions. 
                   Please consult a qualified tax advisor for accurate tax planning and filing.
                 </p>
