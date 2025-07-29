@@ -1,14 +1,9 @@
-/******************************************************************
- * Clients.tsx – 100 % Firebase Realtime DB (live sync)
- * Drop-in replacement.  Nothing else to change.
- ******************************************************************/
+// -------------  Clients.tsx  -------------
 import React, { useState, useEffect } from 'react';
-import {
-  Plus, Search, Eye, Download, Trash2, Edit, Calendar
-} from 'lucide-react';
+import { Plus, Search, Eye, Download, Trash2, Edit } from 'lucide-react';
 import { format } from 'date-fns';
-import { firebaseSync } from '../firebasesync';
-import { formatCurrency } from '../utils/formatCurrency';
+import { firebaseSync } from '../firebasesync';  // ← Firebase helper
+import { formatCurrency } from '../services/export'; // if you have it, else delete lines that use it
 
 interface Client {
   id: string;
@@ -23,7 +18,7 @@ interface Client {
   updatedAt?: string;
 }
 
-/* ---------- Firebase helpers ---------- */
+/* ----------  helpers  ---------- */
 const createClient = (c: Omit<Client, 'id' | 'createdAt'>) =>
   firebaseSync.addToSyncQueue({
     type: 'create',
@@ -45,20 +40,22 @@ const deleteClient = (id: string) =>
     data: { id },
   });
 
+/* ----------  component  ---------- */
 export function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showDetail, setShowDetail] = useState<Client | null>(null);
 
-  /* ---------- Real-time listener ---------- */
+  /* -- real-time listener -- */
   useEffect(() => {
-    firebaseSync.setupRealtimeListener('clients', (data) => setClients(data || []));
+    firebaseSync.setupRealtimeListener('clients', (data) =>
+      setClients(data || [])
+    );
     return () => firebaseSync.removeRealtimeListener('clients');
   }, []);
 
-  /* ---------- Form state ---------- */
+  /* -- form state -- */
   const [form, setForm] = useState({
     name: '',
     cnic: '',
@@ -70,42 +67,45 @@ export function Clients() {
   });
 
   const resetForm = () => {
-    setForm({ name: '', cnic: '', password: '', type: 'Other', phone: '', email: '', notes: '' });
+    setForm({
+      name: '',
+      cnic: '',
+      password: '',
+      type: 'Other',
+      phone: '',
+      email: '',
+      notes: '',
+    });
     setEditingClient(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^\d{13}$/.test(form.cnic)) return alert('CNIC must be 13 digits');
-    const client = { ...form, createdAt: new Date().toISOString() };
+    const payload = { ...form };
     editingClient
-      ? updateClient({ ...editingClient, ...form })
-      : createClient(client);
+      ? updateClient({ ...editingClient, ...payload })
+      : createClient(payload);
     resetForm();
     setShowForm(false);
   };
 
+  /* -- helpers -- */
   const filtered = clients.filter((c) =>
     `${c.name} ${c.cnic} ${c.phone} ${c.email}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6 p-4">
-      {/* Header */}
+      {/* header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold dark:text-white">Clients</h1>
-          <p className="text-sm dark:text-gray-400">Synced via Firebase</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
+        <h1 className="text-2xl font-bold dark:text-white">Clients</h1>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
           <Plus size={18} /> New Client
         </button>
       </div>
 
-      {/* Search */}
+      {/* search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <input
@@ -113,11 +113,11 @@ export function Clients() {
           placeholder="Search name, CNIC, phone, email..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white"
+          className="w-full pl-10 pr-4 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         />
       </div>
 
-      {/* Table */}
+      {/* table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -134,24 +134,12 @@ export function Clients() {
               <tr key={c.id} className="border-b dark:border-gray-700">
                 <td className="px-4 py-2 dark:text-white">{c.name}</td>
                 <td className="px-4 py-2 dark:text-gray-300">{c.cnic}</td>
-                <td className="px-4 py-2">
-                  <span className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
-                    {c.type}
-                  </span>
-                </td>
-                <td className="px-4 py-2 dark:text-gray-300">
-                  {c.phone}<br />{c.email}
-                </td>
+                <td className="px-4 py-2"><span className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">{c.type}</span></td>
+                <td className="px-4 py-2 dark:text-gray-300">{c.phone}<br />{c.email}</td>
                 <td className="px-4 py-2 flex gap-2">
-                  <button onClick={() => setEditingClient(c)} className="text-blue-600">
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => setShowDetail(c)} className="text-green-600">
-                    <Eye size={16} />
-                  </button>
-                  <button onClick={() => deleteClient(c.id)} className="text-red-600">
-                    <Trash2 size={16} />
-                  </button>
+                  <button onClick={() => setEditingClient(c)} className="text-blue-600"><Edit size={16} /></button>
+                  <button onClick={() => alert('Receipts viewer coming soon')} className="text-green-600"><Eye size={16} /></button>
+                  <button onClick={() => deleteClient(c.id)} className="text-red-600"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
@@ -159,7 +147,7 @@ export function Clients() {
         </table>
       </div>
 
-      {/* Form Modal */}
+      {/* form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-md">
@@ -176,59 +164,18 @@ export function Clients() {
                   onChange={(e) => setForm({ ...form, [k]: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   maxLength={k === 'cnic' ? 13 : undefined}
-                  required={k === 'name' || k === 'cnic'}
                 />
               ))}
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as Client['type'] })}
-                className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              >
-                <option>IRIS</option>
-                <option>SECP</option>
-                <option>PRA</option>
-                <option>Other</option>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as Client['type'] })} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                <option>IRIS</option><option>SECP</option><option>PRA</option><option>Other</option>
               </select>
-              <textarea
-                placeholder="Notes"
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                rows={2}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                required={!editingClient}
-              />
+              <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+              <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white" required={!editingClient} />
               <div className="flex gap-2">
-                <button type="button" onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 bg-gray-300 dark:bg-gray-600 rounded-lg">
-                  Cancel
-                </button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white rounded-lg">
-                  {editingClient ? 'Update' : 'Create'}
-                </button>
+                <button type="button" onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 bg-gray-300 dark:bg-gray-600 rounded-lg">Cancel</button>
+                <button type="submit" className="flex-1 bg-blue-600 text-white rounded-lg">{editingClient ? 'Update' : 'Create'}</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {showDetail && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-md">
-            <h2 className="text-lg font-bold dark:text-white">{showDetail.name}</h2>
-            <p className="dark:text-gray-300">CNIC: {showDetail.cnic}</p>
-            <p className="dark:text-gray-300">Type: {showDetail.type}</p>
-            <p className="dark:text-gray-300">Phone: {showDetail.phone || '—'}</p>
-            <p className="dark:text-gray-300">Email: {showDetail.email || '—'}</p>
-            <button onClick={() => setShowDetail(null)} className="mt-4 w-full bg-gray-300 dark:bg-gray-600 rounded-lg">
-              Close
-            </button>
           </div>
         </div>
       )}
