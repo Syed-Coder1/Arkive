@@ -181,4 +181,66 @@ export const TaxCalculator: React.FC = () => {
           </div>
 
           {/* pie & bar charts — unchanged */}
-          
+          div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+              <h3 className="text-lg font-semibold mb-2">Income Distribution</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Net', value: result.netIncome },
+                      { name: 'Tax', value: result.totalTax },
+                    ]}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                  >
+                    <Cell fill="#10B981" />
+                    <Cell fill="#EF4444" />
+                  </Pie>
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
+              <h3 className="text-lg font-semibold mb-2">Tax Brackets ({cat.name})</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart
+                  data={cat.taxBrackets.map((b) => ({
+                    range: `${fmt(b.min)} – ${b.max ? fmt(b.max) : '∞'}`,
+                    rate: b.rate * 100,
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+                  <YAxis unit="%" />
+                  <Tooltip formatter={(v: number) => `${v}%`} />
+                  <Bar dataKey="rate" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* saving tips */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Lightbulb className="w-5 h-5 text-yellow-500"/>Tax-saving Tips</h3>
+            <ul className="space-y-1 text-sm">
+              {taxCalculator.getTaxSavingTips(categoryId, result.grossIncome).map((t, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></span>
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 text-sm">
+            <Info className="inline w-4 h-4 mr-1" />
+            Disclaimer: Estimates per Finance Act 2025-26. Consult a qualified tax advisor for precise filing.
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
