@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Eye, Download, Calendar, Edit, Trash2, Shield } from 'lucide-react';
-import { firebaseSync } from '../firebasesync'; // your sync service
 import { format } from 'date-fns';
 import { exportService } from '../services/export';
 import { db } from '../services/database';
