@@ -98,7 +98,7 @@ class TaxCalculatorService {
       nisabThreshold: 612_000,
     },
 
-    /* ---------- 5. Property Sale (§236C) ---------- */
+    /* ---------- 5. Property Sale (Sec-236C) ---------- */
     property236C: {
       id: 'property236C',
       name: 'Sale / Transfer (§236C)',
@@ -113,7 +113,7 @@ class TaxCalculatorService {
       nisabThreshold: 0,
     },
 
-    /* ---------- 6. Property Purchase (§236K) ---------- */
+    /* ---------- 6. Property Purchase (Sec-236K) ---------- */
     property236K: {
       id: 'property236K',
       name: 'Purchase (§236K)',
