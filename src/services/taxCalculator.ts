@@ -101,7 +101,7 @@ class TaxCalculatorService {
     /* ---------- 5. Property Sale (Sec-236C) ---------- */
     property236C: {
       id: 'property236C',
-      name: 'Sale / Transfer (§236C)',
+      name: 'Sale / Transfer (Sec-236C)',
       description: 'Advance tax on consideration',
       standardDeduction: 0,
       taxBrackets: [
@@ -116,7 +116,7 @@ class TaxCalculatorService {
     /* ---------- 6. Property Purchase (Sec-236K) ---------- */
     property236K: {
       id: 'property236K',
-      name: 'Purchase (§236K)',
+      name: 'Purchase (Sec-236K)',
       description: 'Advance tax on FMV',
       standardDeduction: 0,
       taxBrackets: [
