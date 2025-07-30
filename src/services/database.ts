@@ -1011,16 +1011,15 @@ class DatabaseService {
       throw error;
     }
   }
-
-  async getSyncStatus() {
-    return await firebaseSync.getSyncStatus();
-  }
-}
-
-export const db = new DatabaseService();
 // ... existing functions ...
 
 export async function getAllAttendance() {
   // TODO: replace with real DB call
   return [];
 }
+  async getSyncStatus() {
+    return await firebaseSync.getSyncStatus();
+  }
+}
+
+export const db = new DatabaseService();
