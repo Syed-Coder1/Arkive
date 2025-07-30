@@ -1015,8 +1015,6 @@ class DatabaseService {
   async getSyncStatus() {
     return await firebaseSync.getSyncStatus();
   }
-}
-
   // ===== Attendance operations =====
   async getAllAttendance(): Promise<Attendance[]> {
     await this.ensureInitialized();
@@ -1031,18 +1029,9 @@ class DatabaseService {
   async markAttendance(record: Omit<Attendance, 'id'>): Promise<Attendance> {
     await this.ensureInitialized();
     const store = await this.getObjectStore('attendance', 'readwrite');
-    const newRecord: Attendance = {
-      ...record,
-      id: crypto.randomUUID(),
-      lastModified: new Date(),
-    };
-    firebaseSync.addToSyncQueue({
-      type: 'create',
-      store: 'attendance',
-      data: newRecord,
-    }).catch(console.warn);
+    const newRecord = { ...record, id: crypto.randomUUID(), lastModified: new Date() };
+    const request = store.add(newRecord);
     return new Promise((resolve, reject) => {
-      const request = store.add(newRecord);
       request.onsuccess = () => resolve(newRecord);
       request.onerror = () => reject(request.error);
     });
@@ -1052,8 +1041,8 @@ class DatabaseService {
     await this.ensureInitialized();
     const store = await this.getObjectStore('attendance');
     const index = store.index('employeeId');
+    const request = index.getAll(employeeId);
     return new Promise((resolve, reject) => {
-      const request = index.getAll(employeeId);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -1063,13 +1052,8 @@ class DatabaseService {
     await this.ensureInitialized();
     const store = await this.getObjectStore('attendance', 'readwrite');
     const updated = { ...record, lastModified: new Date() };
-    firebaseSync.addToSyncQueue({
-      type: 'update',
-      store: 'attendance',
-      data: updated,
-    }).catch(console.warn);
+    const request = store.put(updated);
     return new Promise((resolve, reject) => {
-      const request = store.put(updated);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -1078,13 +1062,8 @@ class DatabaseService {
   async deleteAttendance(id: string): Promise<void> {
     await this.ensureInitialized();
     const store = await this.getObjectStore('attendance', 'readwrite');
-    firebaseSync.addToSyncQueue({
-      type: 'delete',
-      store: 'attendance',
-      data: { id },
-    }).catch(console.warn);
+    const request = store.delete(id);
     return new Promise((resolve, reject) => {
-      const request = store.delete(id);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
@@ -1094,11 +1073,15 @@ class DatabaseService {
     await this.ensureInitialized();
     const store = await this.getObjectStore('attendance');
     const index = store.index('date');
+    const request = index.getAll(date);
     return new Promise((resolve, reject) => {
-      const request = index.getAll(date);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
+}  // ← this is the closing brace of class DatabaseService
+
 export const db = new DatabaseService();
+}
+
