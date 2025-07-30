@@ -993,10 +993,7 @@ class DatabaseService {
           });
         }
       };
-export async function getAllAttendance() {
-  // return the attendance list from your DB
-  return [];          // or whatever your real DB call is
-}
+
       // Import all data
       await Promise.all([
         importStore('users', users),
@@ -1021,3 +1018,9 @@ export async function getAllAttendance() {
 }
 
 export const db = new DatabaseService();
+// ... existing functions ...
+
+export async function getAllAttendance() {
+  // TODO: replace with real DB call
+  return [];
+}
