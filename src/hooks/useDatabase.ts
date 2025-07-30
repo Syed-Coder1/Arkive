@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../services/database';
 import { Client, Receipt, Expense, Activity, Notification, Document } from '../types';
 import { useEmployees } from './useEmployees';
-import { useAttendance } from './useAttendance';
+import { useAttendance } from '/src/hooks/useAttendance';
 
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
