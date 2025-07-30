@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { format, startOfMonth, endOfMonth, isToday, parseISO } from 'date-fns';
 import { Employee, Attendance } from '../types';
 import { exportService } from '../services/export';
+import { useEmployees } from '../hooks/useEmployees';
 
 export function EmployeeManagement() {
   const { employees, createEmployee, updateEmployee, deleteEmployee, loading } = useEmployees();
