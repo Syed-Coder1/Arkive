@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Eye, Download, Trash2, Edit } from 'lucide-react';
 import { format } from 'date-fns';
-import { firebaseSync } from '../firebasesync';  // ← Firebase helper
+import { firebaseSync } from "../services/firebaseSync";
 import { formatCurrency } from '../services/export'; // if you have it, else delete lines that use it
 
 interface Client {
