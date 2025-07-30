@@ -1,4 +1,1 @@
-// src/components/AdvancedFeatures.tsx
-export default function AdvancedFeatures() {
-  return <div>Advanced features coming soon…</div>;
-}
+export { default as AdvancedAnalytics } from './AdvancedAnalytics';
