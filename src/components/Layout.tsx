@@ -19,6 +19,7 @@ const menuItems = [
   { id: 'clients', label: 'Clients', icon: Users },
   { id: 'vault', label: 'Secure Vault', icon: Shield },
   { id: 'expenses', label: 'Expenses', icon: CreditCard },
+  { id: 'employees', label: 'Employees', icon: Users },
   { id: 'tax-calculator', label: 'Tax Calculator', icon: Calculator },
   { id: 'analytics', label: 'Analytics', icon: TrendingUp },
   { id: 'smart-notifications', label: 'Notifications', icon: Bell },

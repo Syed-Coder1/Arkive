@@ -261,6 +261,36 @@ class TaxCalculatorService {
   formatCurrency(amount: number): string {
     return `₨${amount.toLocaleString('en-PK')}`;
   }
+
+  getTaxSavingTips(categoryId: string, income: number): string[] {
+    const tips: string[] = [];
+    
+    switch (categoryId) {
+      case 'salary':
+        tips.push('Contribute to provident fund to reduce taxable income');
+        tips.push('Claim medical allowance up to ₨120,000 annually');
+        tips.push('Utilize house rent allowance exemptions');
+        if (income > 1200000) tips.push('Consider salary restructuring with benefits');
+        break;
+      case 'business':
+        tips.push('Maintain proper business records and receipts');
+        tips.push('Claim legitimate business expenses');
+        tips.push('Consider depreciation on business assets');
+        tips.push('Plan business investments for tax benefits');
+        break;
+      case 'property':
+        tips.push('Keep records of property maintenance expenses');
+        tips.push('Consider property improvements for depreciation');
+        tips.push('Plan rental agreements strategically');
+        break;
+      default:
+        tips.push('Consult a tax advisor for personalized planning');
+        tips.push('Keep detailed records of all transactions');
+        tips.push('File returns on time to avoid penalties');
+    }
+    
+    return tips;
+  }
 }
 
 export const taxCalculator = new TaxCalculatorService();

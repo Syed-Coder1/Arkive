@@ -259,6 +259,8 @@ export function useDatabase() {
   const expenses = useExpenses();
   const notifications = useNotifications();
   const documents = useDocuments();
+  const employees = useEmployees();
+  const attendanceHook = useAttendance();
 
   return {
     // Clients
@@ -296,5 +298,21 @@ export function useDatabase() {
     deleteDocument: documents.deleteDocument,
     logDocumentAccess: documents.logAccess,
     refetchDocuments: documents.refetch,
+
+    // Employees
+    employees: employees.employees,
+    employeesLoading: employees.loading,
+    createEmployee: employees.createEmployee,
+    updateEmployee: employees.updateEmployee,
+    deleteEmployee: employees.deleteEmployee,
+    refetchEmployees: employees.refetch,
+
+    // Attendance
+    attendance: attendanceHook.attendance,
+    attendanceLoading: attendanceHook.loading,
+    markAttendance: attendanceHook.markAttendance,
+    getEmployeeAttendance: attendanceHook.getEmployeeAttendance,
+    updateAttendance: attendanceHook.updateAttendance,
+    refetchAttendance: attendanceHook.refetch,
   };
 }

@@ -8,6 +8,7 @@ import { Clients } from './components/Clients';
 import { Vault } from './components/Vault';
 import { Expenses, ActivityLog, BackupRestore } from './components/SimplePages';
 import Settings from './components/Settings';
+import { EmployeeManagement } from './components/EmployeeManagement';
 import { TaxCalculator } from './components/TaxCalculator';
 import { AdvancedAnalytics, SmartNotifications } from './components/AdvancedFeatures';
 import { clsx } from 'clsx';
@@ -86,6 +87,8 @@ function AppContent() {
         return <Vault showUpload={showVaultUpload} onCloseUpload={() => setShowVaultUpload(false)} />;
       case 'expenses':
         return <Expenses showForm={showExpenseForm} onCloseForm={() => setShowExpenseForm(false)} />;
+      case 'employees':
+        return <EmployeeManagement />;
       case 'tax-calculator':
         return <TaxCalculator />;
       case 'analytics':

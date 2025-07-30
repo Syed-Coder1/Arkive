@@ -3,7 +3,7 @@ import { firebaseSync } from './firebaseSync';
 
 class DatabaseService {
   private dbName = 'arkive-database';
-  private dbVersion = 6; // Increment for Firebase integration
+  private dbVersion = 7; // Increment for Employee Management
   private db: IDBDatabase | null = null;
   private isOnline = navigator.onLine;
   private initPromise: Promise<void> | null = null;
@@ -117,6 +117,26 @@ class DatabaseService {
             documentStore.createIndex('fileType', 'fileType');
             documentStore.createIndex('uploadedAt', 'uploadedAt');
             documentStore.createIndex('lastModified', 'lastModified');
+          }
+
+          // Employees store
+          if (!db.objectStoreNames.contains('employees')) {
+            const employeeStore = db.createObjectStore('employees', { keyPath: 'id' });
+            employeeStore.createIndex('employeeId', 'employeeId', { unique: true });
+            employeeStore.createIndex('username', 'username', { unique: true });
+            employeeStore.createIndex('email', 'email', { unique: true });
+            employeeStore.createIndex('department', 'department');
+            employeeStore.createIndex('status', 'status');
+            employeeStore.createIndex('lastModified', 'lastModified');
+          }
+
+          // Attendance store
+          if (!db.objectStoreNames.contains('attendance')) {
+            const attendanceStore = db.createObjectStore('attendance', { keyPath: 'id' });
+            attendanceStore.createIndex('employeeId', 'employeeId');
+            attendanceStore.createIndex('date', 'date');
+            attendanceStore.createIndex('status', 'status');
+            attendanceStore.createIndex('lastModified', 'lastModified');
           }
         };
       } catch (error) {
@@ -942,18 +962,20 @@ class DatabaseService {
          async syncFromFirebase(): Promise<void> {
     try {
       // First fetch all data from Firebase
-      const [users, clients, receipts, expenses, activities, notifications, documents] = await Promise.all([
+      const [users, clients, receipts, expenses, activities, notifications, documents, employees, attendance] = await Promise.all([
         firebaseSync.getStoreFromFirebase('users'),
         firebaseSync.getStoreFromFirebase('clients'),
         firebaseSync.getStoreFromFirebase('receipts'),
         firebaseSync.getStoreFromFirebase('expenses'),
         firebaseSync.getStoreFromFirebase('activities'),
         firebaseSync.getStoreFromFirebase('notifications'),
-        firebaseSync.getStoreFromFirebase('documents')
+        firebaseSync.getStoreFromFirebase('documents'),
+        firebaseSync.getStoreFromFirebase('employees'),
+        firebaseSync.getStoreFromFirebase('attendance')
       ]);
 
       // Define stores to clear
-      const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents'];
+      const stores = ['users', 'clients', 'receipts', 'expenses', 'activities', 'notifications', 'documents', 'employees', 'attendance'];
 
       // Clear existing data first
       for (const storeName of stores) {
@@ -980,7 +1002,9 @@ class DatabaseService {
         importStore('expenses', expenses),
         importStore('activities', activities),
         importStore('notifications', notifications),
-        importStore('documents', documents)
+        importStore('documents', documents),
+        importStore('employees', employees),
+        importStore('attendance', attendance)
       ]);
     } catch (error) {
       console.error('Firebase sync from failed:', error);

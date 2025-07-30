@@ -62,6 +62,38 @@ export interface Notification {
   createdAt: Date;
 }
 
+export interface Employee {
+  id: string;
+  employeeId: string;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  department: string;
+  salary: number;
+  joinDate: Date;
+  status: 'active' | 'inactive' | 'terminated';
+  username: string;
+  password: string;
+  role: 'employee' | 'manager';
+  createdAt: Date;
+  updatedAt: Date;
+  lastModified?: Date;
+}
+
+export interface Attendance {
+  id: string;
+  employeeId: string;
+  date: Date;
+  checkIn?: Date;
+  checkOut?: Date;
+  status: 'present' | 'absent' | 'late' | 'half-day' | 'leave';
+  notes?: string;
+  workingHours?: number;
+  createdAt: Date;
+  lastModified?: Date;
+}
+
 export interface Document {
   id: string;
   clientCnic: string;
