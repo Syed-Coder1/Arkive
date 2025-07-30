@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import { exportService } from '../services/export';
 import { db } from '../services/database';
-import { syncReceiptToFirebase } from '../firebaseReceipts';
 
 interface ReceiptsProps {
   showForm?: boolean;
