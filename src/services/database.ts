@@ -1011,15 +1011,94 @@ class DatabaseService {
       throw error;
     }
   }
-// ... existing functions ...
 
-export async function getAllAttendance() {
-  // TODO: replace with real DB call
-  return [];
-}
   async getSyncStatus() {
     return await firebaseSync.getSyncStatus();
   }
 }
+
+  // ===== Attendance operations =====
+  async getAllAttendance(): Promise<Attendance[]> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('attendance');
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async markAttendance(record: Omit<Attendance, 'id'>): Promise<Attendance> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('attendance', 'readwrite');
+    const newRecord: Attendance = {
+      ...record,
+      id: crypto.randomUUID(),
+      lastModified: new Date(),
+    };
+    firebaseSync.addToSyncQueue({
+      type: 'create',
+      store: 'attendance',
+      data: newRecord,
+    }).catch(console.warn);
+    return new Promise((resolve, reject) => {
+      const request = store.add(newRecord);
+      request.onsuccess = () => resolve(newRecord);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAttendanceByEmployee(employeeId: string): Promise<Attendance[]> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('attendance');
+    const index = store.index('employeeId');
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(employeeId);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async updateAttendance(record: Attendance): Promise<void> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('attendance', 'readwrite');
+    const updated = { ...record, lastModified: new Date() };
+    firebaseSync.addToSyncQueue({
+      type: 'update',
+      store: 'attendance',
+      data: updated,
+    }).catch(console.warn);
+    return new Promise((resolve, reject) => {
+      const request = store.put(updated);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteAttendance(id: string): Promise<void> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('attendance', 'readwrite');
+    firebaseSync.addToSyncQueue({
+      type: 'delete',
+      store: 'attendance',
+      data: { id },
+    }).catch(console.warn);
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAttendanceByDate(date: string): Promise<Attendance[]> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('attendance');
+    const index = store.index('date');
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(date);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
 
 export const db = new DatabaseService();
