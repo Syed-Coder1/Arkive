@@ -18,7 +18,7 @@ import {
   TrendingUp,
   BarChart3
 } from 'lucide-react';
-import { useEmployees, useAttendance } from '../hooks/useDatabase';
+import { useAttendance } from '/src/hooks/useAttendance';
 import { useAuth } from '../contexts/AuthContext';
 import { format, startOfMonth, endOfMonth, isToday, parseISO } from 'date-fns';
 import { Employee, Attendance } from '../types';
