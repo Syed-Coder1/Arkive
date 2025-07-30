@@ -1080,8 +1080,6 @@ class DatabaseService {
     });
   }
 
-}  // ← this is the closing brace of class DatabaseService
-
-export const db = new DatabaseService();
 }
 
+export const db = new DatabaseService();
