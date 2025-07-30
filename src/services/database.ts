@@ -1079,7 +1079,58 @@ class DatabaseService {
       request.onerror = () => reject(request.error);
     });
   }
+  // ===== Employee operations =====
+  async getAllEmployees(): Promise<Employee[]> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('employees');
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
 
+  async createEmployee(employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<Employee> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('employees', 'readwrite');
+    const newEmployee = { ...employee, id: crypto.randomUUID(), createdAt: new Date(), updatedAt: new Date(), lastModified: new Date() };
+    const request = store.add(newEmployee);
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(newEmployee);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async updateEmployee(employee: Employee): Promise<void> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('employees', 'readwrite');
+    const updated = { ...employee, updatedAt: new Date(), lastModified: new Date() };
+    const request = store.put(updated);
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteEmployee(id: string): Promise<void> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('employees', 'readwrite');
+    const request = store.delete(id);
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getEmployeeById(id: string): Promise<Employee | null> {
+    await this.ensureInitialized();
+    const store = await this.getObjectStore('employees');
+    const request = store.get(id);
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
 }
 
 export const db = new DatabaseService();
