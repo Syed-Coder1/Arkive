@@ -102,7 +102,7 @@ class FirebaseSyncService {
       case 'update':
         await set(dataRef, {
           ...operation.data,
-         new Date(operation.timestamp).toISOString()
+          lastModified: new Date(operation.timestamp).toISOString(),
           syncedBy: this.deviceId
         });
         break;
