@@ -1,1 +1,2 @@
-export { default as AdvancedAnalytics } from './AdvancedAnalytics';
+// src/components/AdvancedFeatures.tsx
+export { default } from './AdvancedAnalytics';
