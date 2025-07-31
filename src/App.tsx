@@ -10,7 +10,7 @@ import { Expenses, ActivityLog, BackupRestore } from './components/SimplePages';
 import Settings from './components/Settings';
 import { EmployeeManagement } from './components/EmployeeManagement';
 import { TaxCalculator } from './components/TaxCalculator';
-import { AdvancedAnalytics, SmartNotifications } from './components/AdvancedFeatures';
+import AdvancedAnalytics from './components/AdvancedAnalytics';
 import { clsx } from 'clsx';
 
 function AppContent() {
