@@ -11,6 +11,7 @@ import Settings from './components/Settings';
 import { EmployeeManagement } from './components/EmployeeManagement';
 import { TaxCalculator } from './components/TaxCalculator';
 import AdvancedAnalytics from './components/AdvancedAnalytics';
+import { SmartNotifications } from './components/SmartNotifications';
 import { clsx } from 'clsx';
 
 function AppContent() {
@@ -93,7 +94,7 @@ function AppContent() {
         return <TaxCalculator />;
       case 'analytics':
         return <AdvancedAnalytics />;
-      case 'smart-notifications':
+      case 'notifications':
         return <SmartNotifications />;
       case 'activity':
         return <ActivityLog />;

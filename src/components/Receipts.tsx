@@ -112,7 +112,7 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
         ...editingReceipt,
         clientName: formData.clientName,
         clientCnic: formData.clientCnic,
-        amount: parseFloat(formData.amount),
+        amount: parseInt(formData.amount.replace(/,/g, '')),
         natureOfWork: formData.natureOfWork,
         paymentMethod: formData.paymentMethod,
         date: new Date(formData.date),
@@ -391,10 +391,11 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
                   <input
                     type="number"
                     value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d]/g, '');
+                      setFormData({ ...formData, amount: value ? parseInt(value).toLocaleString() : '' });
+                    }}
                     placeholder="Enter amount"
-                    min="0"
-                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
