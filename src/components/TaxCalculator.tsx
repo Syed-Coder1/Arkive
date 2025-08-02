@@ -171,10 +171,10 @@ export const TaxCalculator: React.FC = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold flex items-center justify-center gap-3 text-gray-900 dark:text-white">
             <Calculator className="w-8 h-8 text-blue-600" />
-            FBR Tax Calculator 2025-26
+            Pakistan Tax Calculator 2025-26
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Professional tax calculator compliant with Finance Act 2025-26
+            Select your income type to calculate tax according to Finance Act 2025-26
           </p>
         </div>
 
@@ -336,8 +336,8 @@ export const TaxCalculator: React.FC = () => {
                 label: 'Tax Rate', 
                 value: `${Math.round(calc.effectiveRate * 100) / 100}%`, 
                 color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-                icon: PieIcon 
-              {label: 'Tax Rate', value: `${Math.round(calc.effectiveRate * 100) / 100}%`, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400', icon: PieChart},
+                icon: PieChart 
+              },
             ].map((c, i) => (
               <div key={i} className={`${c.color} p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700`}>
                 <div className="flex items-center justify-between mb-2">
@@ -447,7 +447,7 @@ export const TaxCalculator: React.FC = () => {
 
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 text-sm">
             <div className="flex items-start gap-2">
-            <Info className="inline w-4 h-4 mr-1" />
+              <Info className="inline w-4 h-4 mr-1" />
               <div>
                 <p className="font-medium text-yellow-800 dark:text-yellow-200 mb-1">Important Disclaimer</p>
                 <p className="text-yellow-700 dark:text-yellow-300">
