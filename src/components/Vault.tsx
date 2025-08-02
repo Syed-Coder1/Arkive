@@ -274,10 +274,10 @@ export function Vault({ showUpload: externalShowUpload, onCloseUpload }: VaultPr
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Shield className="w-7 h-7 text-blue-600" />
-            Secure Vault
+            Document Vault
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Encrypted document storage for client files and contracts
+            Military-grade encrypted storage for sensitive documents
           </p>
         </div>
         <button

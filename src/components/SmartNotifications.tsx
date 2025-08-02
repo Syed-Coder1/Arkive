@@ -100,10 +100,10 @@ export function SmartNotifications() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Bell className="w-7 h-7 text-blue-600" />
-            Smart Notifications
+            Notification Center
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage system notifications and alerts ({unreadCount} unread)
+            Manage alerts and system notifications ({unreadCount} unread)
           </p>
         </div>
         <div className="flex gap-2">

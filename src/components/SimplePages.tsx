@@ -124,7 +124,9 @@ export function Expenses({ showForm: externalShowForm, onCloseForm }: ExpensesPr
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
-          <p className="text-gray-600 dark:text-gray-400">Total: Rs. {totalExpenses.toLocaleString()}</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Track business expenses and categorize spending - Total: PKR {totalExpenses.toLocaleString()}
+          </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -323,9 +325,9 @@ export function ActivityLog() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Activity Log</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Activity</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Track all system activities and user actions
+          Complete audit trail of all system activities and user actions
         </p>
       </div>
 
@@ -402,9 +404,9 @@ export function BackupRestore() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Backup & Restore</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Data Management</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your data backups and restore from previous exports
+          Backup, restore, and synchronize your business data securely
         </p>
       </div>
 

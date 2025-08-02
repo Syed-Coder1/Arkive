@@ -238,10 +238,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onPageChange, onOpenForm }
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard
+            Welcome to Arkive
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Welcome back! Here's what's happening with your business.
+            Your comprehensive tax office management dashboard
           </p>
         </div>
         

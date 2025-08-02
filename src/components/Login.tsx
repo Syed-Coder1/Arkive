@@ -321,18 +321,18 @@ export function Login() {
               </div>
               <div className="flex items-center justify-center">
                 <Users className="w-3 h-3 mr-1 text-blue-500" />
-                <span>Role-based Access</span>
-              </div>
+          <p className="text-gray-600 dark:text-gray-400 text-sm font-medium mt-1">
+            Professional Tax Office Management
             </div>
           </div>
         </div>
 
         {/* Default Credentials (for development) */}
-        {mode === 'login' && (
+            <span>Secure</span>
           <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
             <p className="font-medium mb-1">Default Admin Credentials:</p>
             <p>Username: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">admin</code></p>
-            <p>Password: <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">admin123</code></p>
+            <span>Real-time</span>
           </div>
         )}
       </div>

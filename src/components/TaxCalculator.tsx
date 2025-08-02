@@ -171,10 +171,10 @@ export const TaxCalculator: React.FC = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold flex items-center justify-center gap-3 text-gray-900 dark:text-white">
             <Calculator className="w-8 h-8 text-blue-600" />
-            Pakistan Tax Calculator 2025-26
+            FBR Tax Calculator 2025-26
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Select your income type to calculate tax according to Finance Act 2025-26
+            Professional tax calculator compliant with Finance Act 2025-26
           </p>
         </div>
 

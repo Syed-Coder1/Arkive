@@ -39,21 +39,21 @@ html, body, #root {
 
 /* Enhanced hover animations */
 .hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
 .hover-scale:hover {
-  transform: scale(1.02);
+  transform: scale(1.01);
 }
 
 /* Button animations */
 button {
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-0.5px);
 }
 
 button:active {
@@ -62,12 +62,12 @@ button:active {
 
 /* Enhanced card animations */
 .card {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
 /* Sidebar animations */

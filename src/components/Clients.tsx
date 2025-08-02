@@ -99,7 +99,12 @@ export function Clients() {
     <div className="space-y-6 p-4">
       {/* header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold dark:text-white">Clients</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Client Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage client profiles and track their payment history
+          </p>
+        </div>
         <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
           <Plus size={18} /> New Client
         </button>

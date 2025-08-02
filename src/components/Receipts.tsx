@@ -189,7 +189,7 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Receipts</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage payment receipts and transactions
+            Track and manage all payment receipts with real-time sync
           </p>
         </div>
         <div className="flex gap-2">

@@ -104,7 +104,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-white tracking-tight">Arkive</h1>
-                    <p className="text-sm text-blue-100 mt-1">Tax Management</p>
+                    <p className="text-sm text-blue-100 mt-1">Professional Suite</p>
                   </div>
                 </div>
               )}
@@ -169,6 +169,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
                     <p className="text-xs text-blue-200 capitalize flex items-center">
                       {user?.role === 'admin' && <Shield className="w-3 h-3 mr-1" />}
                       {user?.role}
+                      {user?.role === 'admin' && <span className="ml-1 text-xs bg-blue-500/20 px-1 rounded">Admin</span>}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">

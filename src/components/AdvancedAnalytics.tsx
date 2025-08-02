@@ -145,10 +145,10 @@ export default function AdvancedAnalytics() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <TrendingUp className="w-7 h-7 text-blue-600" />
-            Advanced Analytics
+            Business Intelligence
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Comprehensive business insights and performance metrics
+            Advanced analytics and insights to drive business growth
           </p>
         </div>
         
