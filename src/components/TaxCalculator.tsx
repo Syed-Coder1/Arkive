@@ -5,17 +5,16 @@
 import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
-  Banknote,
-  Briefcase,
   Calculator,
-  Car,
-  Coins,
-  Home,
   Info,
   Lightbulb,
-  PieChart as PieIcon,
-  TrendingUp,
+  DollarSign,
   Users,
+  Building,
+  Home,
+  Banknote,
+  TrendingUp,
+  PieChart
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -164,19 +163,6 @@ export const TaxCalculator: React.FC = () => {
 
   /* ---------- Helpers ---------- */
   const fmt = (n: number) => `₨${n.toLocaleString('en-PK')}`;
-  const iconMap: Record<string, React.ElementType> = {
-    salary: Users,
-    pension: Users,
-    business: Briefcase,
-    property: Home,
-    property236C: Home,
-    property236K: Home,
-    bankProfit: Banknote,
-    dividend: Coins,
-    capitalGainsSecurities: TrendingUp,
-    builderDeveloper: Home,
-    transport: Car,
-  };
 
   /* ---------- Category picker ---------- */
   if (step === 'category') {
@@ -194,7 +180,39 @@ export const TaxCalculator: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {allCategories.map((c) => {
-            const Icon = iconMap[c.id] || Calculator;
+            let Icon = Calculator;
+            let bgColor = 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700';
+            
+            switch (c.id) {
+              case 'salary':
+                Icon = Users;
+                bgColor = 'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700';
+                break;
+              case 'pension':
+                Icon = Users;
+                bgColor = 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700';
+                break;
+              case 'business':
+                Icon = Building;
+                bgColor = 'from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700';
+                break;
+              case 'property':
+              case 'property236C':
+              case 'property236K':
+                Icon = Home;
+                bgColor = 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700';
+                break;
+              case 'bankProfit':
+              case 'dividend':
+                Icon = Banknote;
+                bgColor = 'from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700';
+                break;
+              case 'capitalGainsSecurities':
+                Icon = TrendingUp;
+                bgColor = 'from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700';
+                break;
+            }
+            
             return (
               <button
                 key={c.id}
@@ -202,9 +220,9 @@ export const TaxCalculator: React.FC = () => {
                   setCategoryId(c.id);
                   setStep('calc');
                 }}
-                className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-left"
+                className={`bg-gradient-to-br ${bgColor} text-white p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-left`}
               >
-                <Icon className="w-12 h-12 mb-4 text-blue-100" />
+                <Icon className="w-12 h-12 mb-4 text-white opacity-90" />
                 <h3 className="text-xl font-bold mb-2">{c.name}</h3>
                 <p className="text-sm opacity-90 leading-relaxed">{c.description}</p>
               </button>
@@ -319,7 +337,7 @@ export const TaxCalculator: React.FC = () => {
                 value: `${Math.round(calc.effectiveRate * 100) / 100}%`, 
                 color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
                 icon: PieIcon 
-              },
+              {label: 'Tax Rate', value: `${Math.round(calc.effectiveRate * 100) / 100}%`, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400', icon: PieChart},
             ].map((c, i) => (
               <div key={i} className={`${c.color} p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700`}>
                 <div className="flex items-center justify-between mb-2">

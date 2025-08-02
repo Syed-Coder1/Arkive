@@ -149,8 +149,8 @@ export function Clients() {
 
       {/* form modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl w-full max-w-lg shadow-xl border border-gray-100 dark:border-gray-700 transform transition-all duration-300 scale-100">
             <h2 className="text-xl font-bold mb-4 dark:text-white">
               {editingClient ? 'Edit' : 'New'} Client
             </h2>
@@ -161,19 +161,19 @@ export function Clients() {
                   type={k === 'email' ? 'email' : 'text'}
                   placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
                   value={form[k as keyof typeof form]}
-                  onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                  onChange={(e) => setForm({...form, [k]: e.target.value})}
                   className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   maxLength={k === 'cnic' ? 13 : undefined}
                 />
               ))}
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as Client['type'] })} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+              <select value={form.type} onChange={(e) => setForm({...form, type: e.target.value as Client['type']})} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                 <option>IRIS</option><option>SECP</option><option>PRA</option><option>Other</option>
               </select>
-              <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
-              <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white" required={!editingClient} />
+              <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} rows={2} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+              <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} className="w-full px-3 py-2 border rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white" required={!editingClient} />
               <div className="flex gap-2">
-                <button type="button" onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 bg-gray-300 dark:bg-gray-600 rounded-lg">Cancel</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white rounded-lg">{editingClient ? 'Update' : 'Create'}</button>
+                <button type="button" onClick={() => { resetForm(); setShowForm(false); }} className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-all duration-200 font-medium">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md">{editingClient ? 'Update' : 'Create'}</button>
               </div>
             </form>
           </div>

@@ -688,8 +688,8 @@ export function EmployeeManagement() {
 
       {/* Employee Form Modal */}
       {showEmployeeForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl border border-gray-100 dark:border-gray-700 transform transition-all duration-300 scale-100">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
               {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
             </h2>
@@ -703,7 +703,7 @@ export function EmployeeManagement() {
                   <input
                     type="text"
                     value={employeeForm.employeeId}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, employeeId: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, employeeId: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                     readOnly={!!editingEmployee}
@@ -717,7 +717,7 @@ export function EmployeeManagement() {
                   <input
                     type="text"
                     value={employeeForm.name}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -730,7 +730,7 @@ export function EmployeeManagement() {
                   <input
                     type="email"
                     value={employeeForm.email}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -743,7 +743,7 @@ export function EmployeeManagement() {
                   <input
                     type="tel"
                     value={employeeForm.phone}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, phone: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -756,7 +756,7 @@ export function EmployeeManagement() {
                   <input
                     type="text"
                     value={employeeForm.position}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, position: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -769,7 +769,7 @@ export function EmployeeManagement() {
                   <input
                     type="text"
                     value={employeeForm.department}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, department: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -784,7 +784,7 @@ export function EmployeeManagement() {
                     value={employeeForm.salary}
                     onChange={(e) => {
                       const value = e.target.value.replace(/[^\d]/g, '');
-                      setEmployeeForm({ ...employeeForm, salary: value ? parseInt(value).toLocaleString() : '' });
+                      setEmployeeForm({...employeeForm, salary: value ? parseInt(value).toLocaleString() : ''});
                     }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
@@ -798,7 +798,7 @@ export function EmployeeManagement() {
                   <input
                     type="date"
                     value={employeeForm.joinDate}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, joinDate: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, joinDate: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -810,7 +810,7 @@ export function EmployeeManagement() {
                   </label>
                   <select
                     value={employeeForm.status}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, status: e.target.value as any })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, status: e.target.value as any})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   >
@@ -826,7 +826,7 @@ export function EmployeeManagement() {
                   </label>
                   <select
                     value={employeeForm.role}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, role: e.target.value as any })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, role: e.target.value as any})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   >
@@ -842,7 +842,7 @@ export function EmployeeManagement() {
                   <input
                     type="text"
                     value={employeeForm.username}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, username: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, username: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   />
@@ -855,7 +855,7 @@ export function EmployeeManagement() {
                   <input
                     type="password"
                     value={employeeForm.password}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
+                    onChange={(e) => setEmployeeForm({...employeeForm, password: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required={!editingEmployee}
                     placeholder={editingEmployee ? "Leave blank to keep current password" : ""}
@@ -870,13 +870,13 @@ export function EmployeeManagement() {
                     setShowEmployeeForm(false);
                     resetEmployeeForm();
                   }}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                  className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-all duration-200 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                 >
                   {editingEmployee ? 'Update Employee' : 'Add Employee'}
                 </button>
@@ -888,8 +888,8 @@ export function EmployeeManagement() {
 
       {/* Attendance Modal */}
       {showAttendanceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-md shadow-xl border border-gray-100 dark:border-gray-700 transform transition-all duration-300 scale-100">
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Mark Attendance</h2>
             
             <form onSubmit={handleAttendanceSubmit} className="space-y-4">
@@ -991,13 +991,13 @@ export function EmployeeManagement() {
                     setShowAttendanceModal(false);
                     resetAttendanceForm();
                   }}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                  className="flex-1 px-4 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-all duration-200 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                 >
                   Mark Attendance
                 </button>
