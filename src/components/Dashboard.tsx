@@ -85,6 +85,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ onPageChange, onOpenForm }
     }));
   }, [expenses]);
 
+  const metrics = React.useMemo(() => {
+    const totalRevenue = receipts.reduce((sum, r) => sum + r.amount, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const netProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    
+    const currentMonth = new Date();
+    const currentMonthStart = startOfMonth(currentMonth);
+    const currentMonthEnd = endOfMonth(currentMonth);
+    const lastMonth = subMonths(currentMonth, 1);
+    const lastMonthStart = startOfMonth(lastMonth);
+    const lastMonthEnd = endOfMonth(lastMonth);
+    
+    const currentMonthRevenue = receipts
+      .filter(r => r.date >= currentMonthStart && r.date <= currentMonthEnd)
+      .reduce((sum, r) => sum + r.amount, 0);
+    
+    const lastMonthRevenue = receipts
+      .filter(r => r.date >= lastMonthStart && r.date <= lastMonthEnd)
+      .reduce((sum, r) => sum + r.amount, 0);
+    
+    const revenueGrowth = lastMonthRevenue > 0 
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+      : 0;
+
+    return {
+      totalRevenue: Math.floor(totalRevenue),
+      totalExpenses: Math.floor(totalExpenses),
+      netProfit: Math.floor(netProfit),
+      profitMargin: Math.floor(profitMargin),
+      revenueGrowth: Math.floor(revenueGrowth),
+      avgReceiptValue: receipts.length > 0 ? Math.floor(totalRevenue / receipts.length) : 0,
+      totalClients: clients.length,
+      activeClients: new Set(receipts.map(r => r.clientCnic)).size
+    };
+  }, [receipts, expenses, clients]);
+
   // Calculate stats
   const totalRevenue = receipts.reduce((sum, receipt) => sum + receipt.amount, 0);
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);

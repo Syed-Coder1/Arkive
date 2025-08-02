@@ -51,11 +51,11 @@ export default function AdvancedAnalytics() {
       
       data.push({
         month: format(monthDate, 'MMM yyyy'),
-        income: Math.round(income),
-        expense: Math.round(expense),
-        profit: Math.round(profit),
+        income: Math.floor(income),
+        expense: Math.floor(expense),
+        profit: Math.floor(profit),
         clients: clientCount,
-        receipts: monthReceipts.length
+        avgReceiptValue: monthReceipts.length > 0 ? Math.floor(income / monthReceipts.length) : 0
       });
     }
     
@@ -72,8 +72,8 @@ export default function AdvancedAnalytics() {
 
     return Object.entries(categories).map(([name, value]) => ({
       name,
-      value: Math.round(value),
-      percentage: ((value / Object.values(categories).reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+      value: Math.floor(value),
+      percentage: Math.floor((value / Object.values(categories).reduce((a, b) => a + b, 0)) * 100)
     }));
   }, [expenses]);
 
@@ -88,9 +88,9 @@ export default function AdvancedAnalytics() {
       return {
         name: client.name,
         cnic: client.cnic,
-        totalAmount: Math.round(totalAmount),
+        totalAmount: Math.floor(totalAmount),
         receiptCount,
-        avgAmount: Math.round(avgAmount),
+        avgAmount: Math.floor(avgAmount),
         type: client.type
       };
     }).sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 10);
@@ -125,12 +125,12 @@ export default function AdvancedAnalytics() {
       : 0;
 
     return {
-      totalRevenue: Math.round(totalRevenue),
-      totalExpenses: Math.round(totalExpenses),
-      netProfit: Math.round(netProfit),
-      profitMargin: Math.round(profitMargin * 100) / 100,
-      revenueGrowth: Math.round(revenueGrowth * 100) / 100,
-      avgReceiptValue: receipts.length > 0 ? Math.round(totalRevenue / receipts.length) : 0,
+      totalRevenue: Math.floor(totalRevenue),
+      totalExpenses: Math.floor(totalExpenses),
+      netProfit: Math.floor(netProfit),
+      profitMargin: Math.floor(profitMargin),
+      revenueGrowth: Math.floor(revenueGrowth),
+      avgReceiptValue: receipts.length > 0 ? Math.floor(totalRevenue / receipts.length) : 0,
       totalClients: clients.length,
       activeClients: new Set(receipts.map(r => r.clientCnic)).size
     };
