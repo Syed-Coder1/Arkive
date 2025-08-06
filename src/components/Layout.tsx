@@ -22,7 +22,7 @@ const menuItems = [
   { id: 'employees', label: 'Employees', icon: Users },
   { id: 'tax-calculator', label: 'Tax Calculator', icon: Calculator },
   { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'notifications', label: 'Smart Notifications', icon: Bell },
   { id: 'activity', label: 'Activity Log', icon: Activity },
   { id: 'backup', label: 'Backup/Restore', icon: HardDrive },
 ];

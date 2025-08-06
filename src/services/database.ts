@@ -505,6 +505,16 @@ class DatabaseService {
       req.onerror = () => reject(req.error);
     });
   }
+
+  async deleteNotification(id: string): Promise<void> {
+    const store = await this.getObjectStore('notifications', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async getAttendanceByDate(date: string): Promise<Attendance[]> {
     const store = await this.getObjectStore('attendance');
     const idx = store.index('date');

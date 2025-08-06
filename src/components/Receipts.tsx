@@ -89,11 +89,6 @@ export function Receipts({ showForm: externalShowForm, onCloseForm }: ReceiptsPr
     };
 
     await createReceipt(newReceipt);
-    try {
-      await syncReceiptToFirebase(newReceipt);
-    } catch (error) {
-      console.warn('Firebase sync failed:', error);
-    }
 
     resetForm();
   } catch (error) {

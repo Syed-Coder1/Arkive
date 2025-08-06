@@ -182,6 +182,7 @@ class FirebaseSyncService {
           lastAccessed: item.lastAccessed ? new Date(item.lastAccessed) : undefined,
           lastLogin: item.lastLogin ? new Date(item.lastLogin) : undefined,
           joinDate: item.joinDate ? new Date(item.joinDate) : undefined
+          joinDate: item.joinDate ? new Date(item.joinDate) : undefined
         }));
         callback(items);
       } else {

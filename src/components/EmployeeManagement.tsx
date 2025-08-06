@@ -552,25 +552,7 @@ export function EmployeeManagement() {
                   <button
                     onClick={() => {
                       // Export attendance report
-                      const reportData = monthlyAttendance.map(att => {
-                        const employee = employees.find(emp => emp.id === att.employeeId);
-                        return {
-                          'Employee ID': employee?.employeeId || '',
-                          'Employee Name': employee?.name || '',
-                          'Date': format(att.date, 'yyyy-MM-dd'),
-                          'Status': att.status,
-                          'Check In': att.checkIn ? format(att.checkIn, 'HH:mm') : '',
-                          'Check Out': att.checkOut ? format(att.checkOut, 'HH:mm') : '',
-                          'Working Hours': att.workingHours?.toFixed(1) || '',
-                          'Notes': att.notes || ''
-                        };
-                      });
-                      
-                      // Create and download Excel file
-                      const ws = XLSX.utils.json_to_sheet(reportData);
-                      const wb = XLSX.utils.book_new();
-                      XLSX.utils.book_append_sheet(wb, ws, 'Attendance Report');
-                      XLSX.writeFile(wb, `attendance-report-${reportMonth}.xlsx`);
+                      alert('Export functionality will be implemented');
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
